@@ -59,7 +59,6 @@
     "stylus": "^0.64.0",
     "svelte": "^5.39.8",
     "tailwindcss": "^3.4.19",
-    "tinacms": "^3.3.1",
     "typescript": "^5.9.3",
     "unist-util-visit": "^5.0.0"
   },
@@ -67,11 +66,9 @@
     "@astrojs/ts-plugin": "^1.10.6",
     "@biomejs/biome": "2.2.5",
     "@rollup/plugin-yaml": "^4.1.2",
-    "@tinacms/cli": "^2.1.1",
     "@types/hast": "^3.0.4",
     "@types/markdown-it": "^14.1.2",
     "@types/mdast": "^4.0.4",
-    "@types/node": "^25.0.10",
     "@types/sanitize-html": "^2.16.0",
     "postcss-import": "^16.1.1",
     "postcss-nesting": "^13.0.2"
