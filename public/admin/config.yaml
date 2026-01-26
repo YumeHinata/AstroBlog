@@ -19,4 +19,3 @@ backend:
   api_root: "https://api.github.com"
   base_url: "https://astro.yum9.in"
   auth_endpoint: "/auth"
-  
