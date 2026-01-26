@@ -1,20 +1,21 @@
 function renderBody(status, content) {
     const html = `
     <script>
-      const receiveMessage = (message) => {
+      const receiveMessage = () => {
         window.opener.postMessage(
-          'authorization:github:${status}:${JSON.stringify(content)}',
-          message.origin
+          'authorization:github:${status}:' + btoa(JSON.stringify(content)),
+          window.location.origin
         );
         window.removeEventListener("message", receiveMessage, false);
+        window.close();
       }
       window.addEventListener("message", receiveMessage, false);
       window.opener.postMessage("authorizing:github", "*");
     </script>
     `;
-    const blob = new Blob([html]);
-    return blob;
+    return html; // ❗ 不用 Blob
 }
+
 
 export async function onRequest(context) {
     const {
