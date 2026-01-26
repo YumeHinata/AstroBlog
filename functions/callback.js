@@ -1,3 +1,5 @@
+return new Response("CALLBACK OK", { status: 200 })
+
 function renderBody(status, content) {
     const html = `
     <script>
