@@ -11,15 +11,15 @@ export async function GET() {
         - { label: "缩略图", name: "thumbnail", widget: "image" }
         - { label: "评分（1-5 的范围）", name: "rating", widget: "number" }
         - { label: "正文", name: "body", widget: "markdown" }
-    media_folder: "src/assets/images" # 文件将被存储在仓库中的位置
-    public_folder: "src/assets/images" # 上传媒体文件的 src 属性
-    backend:
-        name: github
-        repo: "YumeHinata/AstroBlog"
-        branch: "main"
-        api_root: "https://api.github.com"
-        base_url: "https://astro.yum9.in"
-        auth_endpoint: "/auth"`;
+media_folder: "src/assets/images" # 文件将被存储在仓库中的位置
+public_folder: "src/assets/images" # 上传媒体文件的 src 属性
+backend:
+    name: github
+    repo: "YumeHinata/AstroBlog"
+    branch: "main"
+    api_root: "https://api.github.com"
+    base_url: "https://astro.yum9.in"
+    auth_endpoint: "/auth"`;
     return new Response(yamlContent, {
         headers: {
             'Content-Type': 'text/yaml; charset=utf-8',
