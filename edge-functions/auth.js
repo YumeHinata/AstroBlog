@@ -7,9 +7,7 @@ export async function onRequest(context) {
         next,
         data,
     } = context;
-
     const client_id = context.env.GITHUB_CLIENT_ID;
-
     try {
         const url = new URL(request.url);
         const redirectUrl = new URL('https://github.com/login/oauth/authorize');
@@ -20,9 +18,7 @@ export async function onRequest(context) {
         crypto.getRandomValues(stateArray);
         const state = Array.from(stateArray, byte => byte.toString(16).padStart(2, '0')).join('');
         redirectUrl.searchParams.set('state', state);
-
         return Response.redirect(redirectUrl.href, 301);
-
     } catch (error) {
         console.error(error);
         return new Response(error.message, {

@@ -25,10 +25,8 @@ export async function onRequest(context) {
         next,
         data,
     } = context;
-
     const client_id = context.env.GITHUB_CLIENT_ID;
     const client_secret = context.env.GITHUB_CLIENT_SECRET;
-
     try {
         const url = new URL(request.url);
         const code = url.searchParams.get('code');
