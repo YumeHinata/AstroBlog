@@ -1,33 +1,33 @@
 function renderBody(status, content) {
-  const payload = JSON.stringify(content).replace(/</g, '\\u003c');
-  const html = `
-  <script>
-    (function () {
-      const msg = 'authorization:github:${status}:${payload}';
-      if (window.opener) {
-        window.opener.postMessage(msg, "*");
+    const html = `
+    <script>
+      const receiveMessage = (message) => {
+        window.opener.postMessage(
+          'authorization:github:${status}:${JSON.stringify(content)}',
+          message.origin
+        );
+        window.removeEventListener("message", receiveMessage, false);
       }
-      window.close();
-    })();
-  </script>
-  `;
-  return html;
+      window.addEventListener("message", receiveMessage, false);
+      window.opener.postMessage("authorizing:github", "*");
+    </script>
+    `;
+    const blob = new Blob([html]);
+    return blob;
 }
-
 
 export async function onRequest(context) {
     const {
-        request, // same as existing Worker API
-        env, // same as existing Worker API
-        params, // if filename includes [id] or [[path]]
-        waitUntil, // same as ctx.waitUntil in existing Worker API
-        next, // used for middleware or to fetch assets
-        data, // arbitrary space for passing data between middlewares
+        request,
+        env,
+        params,
+        waitUntil,
+        next,
+        data,
     } = context;
 
     const client_id = context.env.GITHUB_CLIENT_ID;
     const client_secret = context.env.GITHUB_CLIENT_SECRET;
-
 
     try {
         const url = new URL(request.url);
@@ -38,7 +38,7 @@ export async function onRequest(context) {
                 method: 'POST',
                 headers: {
                     'content-type': 'application/json',
-                    'user-agent': 'edgeone-functions-github-oauth-login-demo',
+                    'user-agent': 'cloudflare-functions-github-oauth-login-demo',
                     'accept': 'application/json',
                 },
                 body: JSON.stringify({ client_id, client_secret, code }),

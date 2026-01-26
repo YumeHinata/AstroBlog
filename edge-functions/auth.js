@@ -1,12 +1,12 @@
 export async function onRequest(context) {
     const {
-        request, // same as existing Worker API
-        env, // same as existing Worker API
-        params, // if filename includes [id] or [[path]]
-        waitUntil, // same as ctx.waitUntil in existing Worker API
-        next, // used for middleware or to fetch assets
-        data, // arbitrary space for passing data between middlewares
-    } = context || {};
+        request,
+        env,
+        params,
+        waitUntil,
+        next,
+        data,
+    } = context;
 
     const client_id = context.env.GITHUB_CLIENT_ID;
 
@@ -16,10 +16,11 @@ export async function onRequest(context) {
         redirectUrl.searchParams.set('client_id', client_id);
         redirectUrl.searchParams.set('redirect_uri', url.origin + '/callback');
         redirectUrl.searchParams.set('scope', 'repo user');
-        redirectUrl.searchParams.set(
-            'state',
-            Math.random().toString(36).slice(2),
-        );
+        const stateArray = new Uint8Array(12);
+        crypto.getRandomValues(stateArray);
+        const state = Array.from(stateArray, byte => byte.toString(16).padStart(2, '0')).join('');
+        redirectUrl.searchParams.set('state', state);
+
         return Response.redirect(redirectUrl.href, 301);
 
     } catch (error) {
