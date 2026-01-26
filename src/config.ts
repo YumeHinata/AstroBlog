@@ -17,7 +17,7 @@ export const siteConfig: SiteConfig = {
 	},
 	banner: {
 		enable: true,
-		src: "src/assets/images/121506026_p0.webp", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+		src: "assets/images/121506026_p0.webp", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 		position: "center", // Equivalent to object-position, only supports 'top', 'center', 'bottom'. 'center' by default
 		credit: {
 			enable: true, // Display the credit text of the banner image
@@ -57,7 +57,7 @@ export const navBarConfig: NavBarConfig = {
 };
 
 export const profileConfig: ProfileConfig = {
-	avatar: "src/assets/images/72181756.jpg", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
+	avatar: "assets/images/72181756.jpg", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
 	name: "YumeHinata",
 	bio: "幻梦是个外行",
 	links: [
