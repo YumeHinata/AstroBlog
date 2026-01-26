@@ -1,5 +1,5 @@
 function renderBody(status, content) {
-  const payload = JSON.stringify(content).replace(/</g, '\\u003c'); // 防 XSS
+  const payload = JSON.stringify(content).replace(/</g, '\\u003c');
   const html = `
   <script>
     (function () {
