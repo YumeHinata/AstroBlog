@@ -1,59 +1,13 @@
 <!doctype html>
 <html lang="zh_CN">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="robots" content="noindex" />
-  <title>内容管理器</title>
-</head>
-<body>
-  <script>
-    // 拦截 fetch 请求，当请求 config.yml 时返回我们的配置
-    const originalFetch = window.fetch;
-    window.fetch = async function(url, options) {
-      if (typeof url === 'string' && url.includes('/admin/config.yml')) {
-        const yamlContent = `collections:
-  - name: "terminal"
-    label: "terminal"
-    folder: "src/content/blog"
-    create: true
-    slug: "{{slug}}"
-    fields:
-      - { label: "布局", name: "layout", widget: "hidden", default: "blog" }
-      - { label: "标题", name: "title", widget: "string" }
-      - { label: "发布日期", name: "date", widget: "datetime" }
-      - { label: "缩略图", name: "thumbnail", widget: "image" }
-      - { label: "评分（1-5 的范围）", name: "rating", widget: "number" }
-      - { label: "正文", name: "body", widget: "markdown" }
-
-media_folder: "src/assets/images"
-public_folder: "/src/assets/images"
-
-backend:
-  name: github
-  repo: "YumeHinata/AstroBlog"
-  branch: "main"
-  site_url: "https://astro.yum9.in"
-  auth_endpoint: "auth"`;
-        
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve(yamlContent),
-          headers: {
-            get: (header) => {
-              if (header.toLowerCase() === 'content-type') {
-                return 'text/yaml';
-              }
-              return null;
-            }
-          }
-        });
-      }
-      return originalFetch.call(this, url, options);
-    };
-  </script>
-  
-  <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <link href="https://cdn.jsdelivr.net/gh/YumeHinata/AstroBlog@main/public/admin/config.yml" type="text/yaml" rel="cms-config-url" />
+    <title>内容管理器</title>
+  </head>
+  <body>
+    <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
+  </body>
 </html>
