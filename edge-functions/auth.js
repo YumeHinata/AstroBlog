@@ -1,4 +1,7 @@
-return new Response("AUTH FUNCTION OK", { status: 200 })
+export async function onRequest() {
+  return new Response("EDGE FUNCTION ACTIVE", { status: 200 })
+}
+
 export async function onRequest(context) {
     const {
         request, // same as existing Worker API
