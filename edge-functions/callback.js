@@ -1,17 +1,19 @@
 function renderBody(status, content) {
-    const html = `
-    <script>
-      (function () {
-        const msg = 'authorization:github:${status}:' + JSON.stringify(content);
-        if (window.opener) {
-          window.opener.postMessage(msg, "*");
-        }
-        window.close();
-      })();
-    </script>
-    `;
-    return html;
+  const payload = JSON.stringify(content).replace(/</g, '\\u003c'); // 防 XSS
+  const html = `
+  <script>
+    (function () {
+      const msg = 'authorization:github:${status}:${payload}';
+      if (window.opener) {
+        window.opener.postMessage(msg, "*");
+      }
+      window.close();
+    })();
+  </script>
+  `;
+  return html;
 }
+
 
 export async function onRequest(context) {
     const {
