@@ -13,7 +13,7 @@ function renderBody(status, content) {
       window.opener.postMessage("authorizing:github", "*");
     </script>
     `;
-    return html; // ❗ 不用 Blob
+    return html;
 }
 
 
