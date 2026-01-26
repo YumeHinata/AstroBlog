@@ -1,21 +1,17 @@
 function renderBody(status, content) {
     const html = `
     <script>
-      const receiveMessage = () => {
-        window.opener.postMessage(
-          'authorization:github:${status}:' + btoa(JSON.stringify(content)),
-          window.location.origin
-        );
-        window.removeEventListener("message", receiveMessage, false);
+      (function () {
+        const msg = 'authorization:github:${status}:' + JSON.stringify(content);
+        if (window.opener) {
+          window.opener.postMessage(msg, "*");
+        }
         window.close();
-      }
-      window.addEventListener("message", receiveMessage, false);
-      window.opener.postMessage("authorizing:github", "*");
+      })();
     </script>
     `;
     return html;
 }
-
 
 export async function onRequest(context) {
     const {
