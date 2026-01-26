@@ -12,7 +12,8 @@ function renderBody(status, content) {
       window.opener.postMessage("authorizing:github", "*");
     </script>
     `;
-    return html;
+    const blob = new Blob([html]);
+    return blob;
 }
 
 export async function onRequest(context) {
