@@ -1,0 +1,125 @@
+---
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+    // 构建期不生成具体路径（兼容无限 hash）
+    return [];
+}
+
+const { hash } = Astro.params;
+
+// 构建期拿不到 params，这里运行时处理
+let targetUrl = null;
+
+try {
+    const posts = await getCollection("posts");
+    const target = posts.find(p => p.slug === hash); // ✅ 大小写严格匹配
+
+    if (target) {
+        targetUrl = `/posts/${target.slug}/`;
+    }
+} catch (e) { }
+---
+
+    <html lang="zh-CN" >
+        <head>
+        <meta charset="utf-8" />
+
+            { targetUrl && <link rel="canonical" href = { targetUrl } />}
+{ targetUrl && <meta http - equiv="refresh" content = {`0;url=${targetUrl}` } />}
+
+<title>页面迁移中...</title>
+
+    < meta name = "robots" content = "index,follow" />
+        <meta name="description" content = "页面已迁移，正在为您跳转到新地址" />
+
+            <style>
+            html, body{
+    margin: 0;
+    padding: 0;
+    height: 100 %;
+    background:#0f0f14;
+    color: #fff;
+    font - family: system - ui, -apple - system, BlinkMacSystemFont;
+}
+    .wrap{
+    height: 100 %;
+    display: flex;
+    align - items: center;
+    justify - content: center;
+    text - align: center;
+}
+    .card{
+    background: rgba(255, 255, 255, 0.06);
+    backdrop - filter: blur(12px);
+    padding: 48px 56px;
+    border - radius: 20px;
+    box - shadow: 0 0 40px rgba(0, 0, 0, .3);
+    max - width: 480px;
+    width: 90 %;
+}
+    .loader{
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, .2);
+    border - top: 4px solid #7aa2ff;
+    border - radius: 50 %;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 24px;
+}
+@keyframes spin{to{ transform: rotate(360deg) } }
+    h1{
+    font - size: 20px;
+    margin - bottom: 12px;
+    font - weight: 600;
+}
+    p{
+    opacity: .7;
+    font - size: 14px;
+    line - height: 1.6;
+    margin: 0;
+}
+    a{
+    color:#7aa2ff;
+    text - decoration: none;
+}
+</style>
+
+{
+    targetUrl && (
+        <script>
+        // 双保险 JS 跳转
+        setTimeout(() => {
+            location.replace("{targetUrl}");
+        }, 50);
+    </script>
+  )
+}
+</head>
+
+    < body >
+    <div class="wrap" >
+        <div class="card" >
+            <div class="loader" > </div>
+
+{
+    targetUrl ? (
+        <>
+        <h1>内容已迁移 </h1>
+        < p > 正在跳转到新地址…</p>
+            < p style = "margin-top:10px;" >
+                如果没有自动跳转，请点击：
+    <a href={ targetUrl }> 立即前往 </a>
+        </p>
+        </>
+      ) : (
+        <>
+        <h1>页面不存在 </h1>
+        < p > 该链接可能已失效或内容已被移除 </p>
+        </>
+    )
+}
+</div>
+    </div>
+    </body>
+    </html>
