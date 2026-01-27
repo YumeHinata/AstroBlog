@@ -7,7 +7,7 @@ export async function getStaticPaths() {
   return posts
     .filter(p => p.data.legacyHash)
     .map(p => ({
-      params: { slug: p.data.legacyHash }
+      params: { slug: p.data.legacyHash } // 严格大小写
     }));
 }
 
@@ -15,7 +15,6 @@ const { slug } = Astro.params;
 const hash = Array.isArray(slug) ? slug.join("/") : slug;
 
 const posts = await getCollection("posts");
-
 const target = posts.find(p => p.data.legacyHash === hash);
 const targetUrl = target ? `/posts/${target.slug}/` : null;
 ---
@@ -76,7 +75,7 @@ const targetUrl = target ? `/posts/${target.slug}/` : null;
 
   {targetUrl && (
     <script is:inline>
-      const TARGET_URL = "{{targetUrl}}";
+      const TARGET_URL = ${JSON.stringify(targetUrl)};
       if (TARGET_URL) {
         setTimeout(() => {
           location.replace(TARGET_URL);
