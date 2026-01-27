@@ -6,9 +6,10 @@ collections:
     fields: # 每个文档的字段，通常在 front matter 中
       - { label: "布局", name: "layout", widget: "hidden", default: "blog" }
       - { label: "标题", name: "title", widget: "string" }
-      - { label: "发布日期", name: "pubDate", widget: "datetime" }
-      - { label: "缩略图", name: "thumbnail", widget: "image", required: false }
-      - { label: "发布状态", name: "published", widget: "boolean", default: true }
+      - { label: "发布日期", name: "published", widget: "datetime" }
+      - { label: "缩略图", name: "thumbnail", widget: "image" }
+      # - { label: "发布状态", name: "published", widget: "boolean", default: true }
+      # - { label: "评分（1-5 的范围）", name: "rating", widget: "number" }
       - { label: "正文", name: "body", widget: "markdown" }
 media_folder: "src/assets/images" # 文件将被存储在仓库中的位置
 public_folder: "src/assets/images" # 上传媒体文件的 src 属性
