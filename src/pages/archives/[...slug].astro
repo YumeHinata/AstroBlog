@@ -109,10 +109,13 @@ const targetUrl = target ? `/posts/${target.slug}/` : null;
 
   {targetUrl && (
     <script>
-      // 双保险跳转（搜索引擎 + 浏览器）
-      setTimeout(() => {
-        location.replace("{targetUrl}");
-      }, 80);
+      // ✅ 安全注入变量（防止 {targetUrl} 被当字符串）
+      const TARGET_URL = {JSON.stringify(targetUrl)};
+      if (TARGET_URL) {
+        setTimeout(() => {
+          location.replace(TARGET_URL);
+        }, 80);
+      }
     </script>
   )}
 </head>
