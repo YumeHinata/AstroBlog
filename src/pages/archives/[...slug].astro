@@ -4,11 +4,10 @@ import { getCollection } from "astro:content";
 export async function getStaticPaths() {
   const posts = await getCollection("posts");
 
-  // 只为有 legacyHash 的文章生成旧路径
   return posts
     .filter(p => p.data.legacyHash)
     .map(p => ({
-      params: { slug: p.data.legacyHash } // ✅ 原样输出，大小写不变
+      params: { slug: p.data.legacyHash } // 大小写原样保留
     }));
 }
 
@@ -17,7 +16,7 @@ const hash = Array.isArray(slug) ? slug.join("/") : slug;
 
 const posts = await getCollection("posts");
 
-// ✅ 严格大小写匹配
+// 严格大小写匹配
 const target = posts.find(p => p.data.legacyHash === hash);
 
 const targetUrl = target ? `/posts/${target.slug}/` : null;
@@ -108,9 +107,8 @@ const targetUrl = target ? `/posts/${target.slug}/` : null;
   </style>
 
   {targetUrl && (
-    <script>
-      // ✅ 安全注入变量（防止 {targetUrl} 被当字符串）
-      const TARGET_URL = {JSON.stringify(targetUrl)};
+    <script is:inline>
+      const TARGET_URL = "{targetUrl}";
       if (TARGET_URL) {
         setTimeout(() => {
           location.replace(TARGET_URL);
