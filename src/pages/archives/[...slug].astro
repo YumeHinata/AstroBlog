@@ -1,0 +1,31 @@
+---
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+	const posts = await getCollection("posts");
+
+	// 生成所有旧 hash 路径
+	return posts
+		.filter(p => p.data.legacyHash)
+		.map(p => ({
+			params: { slug: p.data.legacyHash } // 原样大小写输出
+		}));
+}
+
+const { slug } = Astro.params;
+
+// slug 可能是数组
+const hash = Array.isArray(slug) ? slug.join("/") : slug;
+
+const posts = await getCollection("posts");
+
+// ⚠️ 严格大小写匹配
+const target = posts.find(p => p.data.legacyHash === hash);
+
+if (!target) {
+	return Astro.redirect("/404", 302);
+}
+
+// 301 永久跳转（SEO权重继承）
+return Astro.redirect(`/posts/${target.slug}`, 301);
+---
