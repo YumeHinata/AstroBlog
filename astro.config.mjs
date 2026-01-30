@@ -29,7 +29,7 @@ import edgeoneAdapter from "@edgeone/astro";
 // https://astro.build/config
 export default defineConfig({
 	adapter: edgeoneAdapter(),
-	site: "https://fuwari.vercel.app/",
+	site: "https://astro.yum9.in",
 	base: "/",
 	trailingSlash: "always",
 	integrations: [
@@ -102,7 +102,7 @@ export default defineConfig({
 				showCopyToClipboardButton: false,
 			}
 		}),
-        svelte(),
+		svelte(),
 		sitemap(),
 	],
 	markdown: {
