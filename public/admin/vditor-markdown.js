@@ -1,37 +1,34 @@
 (function () {
-  const widget = {
-    id: "vditor-markdown",
+  const h = window.CMS.h;
 
-    control: function ({ value, onChange }) {
-      const container = document.createElement("div");
-      const editorDiv = document.createElement("div");
-      container.appendChild(editorDiv);
-
-      new window.Vditor(editorDiv, {
+  class VditorControl extends window.React.Component {
+    componentDidMount() {
+      this.vditor = new window.Vditor(this.editor, {
         height: 500,
         mode: "sv",
         cache: { enable: false },
-        value: value || "",
+        value: this.props.value || "",
         input: (val) => {
-          onChange(val);
+          this.props.onChange(val);
         },
       });
+    }
 
-      return container;
-    },
+    render() {
+      return h("div", {
+        ref: (el) => (this.editor = el),
+      });
+    }
+  }
 
-    preview: function ({ value }) {
-      const pre = document.createElement("pre");
-      pre.textContent = value || "";
-      return pre;
-    },
-  };
+  const VditorPreview = ({ value }) =>
+    h("pre", {}, value || "");
 
   window.CMS.registerWidget(
-    widget.id,
-    widget.control,
-    widget.preview
+    "vditor-markdown",
+    VditorControl,
+    VditorPreview
   );
 
-  console.log("[vditor] widget registered");
+  console.log("[vditor] widget registered (react)");
 })();
