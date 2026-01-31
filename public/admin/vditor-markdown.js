@@ -1,7 +1,8 @@
 (function () {
-  const h = window.CMS.h;
+  const { CMS, React } = window;
+  const h = CMS.h;
 
-  class VditorControl extends window.React.Component {
+  class VditorControl extends CMS.WidgetControl {
     componentDidMount() {
       this.vditor = new window.Vditor(this.editor, {
         height: 500,
@@ -14,9 +15,17 @@
       });
     }
 
+    componentWillUnmount() {
+      if (this.vditor) {
+        this.vditor.destroy();
+      }
+    }
+
     render() {
       return h("div", {
-        ref: (el) => (this.editor = el),
+        ref: (el) => {
+          this.editor = el;
+        },
       });
     }
   }
@@ -24,11 +33,11 @@
   const VditorPreview = ({ value }) =>
     h("pre", {}, value || "");
 
-  window.CMS.registerWidget(
+  CMS.registerWidget(
     "vditor-markdown",
     VditorControl,
     VditorPreview
   );
 
-  console.log("[vditor] widget registered (react)");
+  console.log("[vditor] widget registered (Decap WidgetControl)");
 })();
