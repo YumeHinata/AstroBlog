@@ -20,4 +20,5 @@ backend:
   branch: "main"
   api_root: "https://api.github.com"
   site_url: "https://www.yumehinata.com"
+  base_url: "https://www.yumehinata.com"
   auth_endpoint: "auth"
