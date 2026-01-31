@@ -1,16 +1,19 @@
 (function () {
-    const VditorMarkdownWidget = {
-        id: "vditor-markdown",
+    function register() {
+        if (!window.CMS || !window.Vditor) {
+            return false;
+        }
 
-        control: function ({ value, onChange }) {
-            const container = document.createElement("div");
-            const editorDiv = document.createElement("div");
+        const VditorMarkdownWidget = {
+            id: "vditor-markdown",
 
-            container.appendChild(editorDiv);
+            control: function ({ value, onChange }) {
+                const container = document.createElement("div");
+                const editorDiv = document.createElement("div");
+                container.appendChild(editorDiv);
 
-            let vditor;
+                let vditor;
 
-            setTimeout(() => {
                 vditor = new Vditor(editorDiv, {
                     height: 500,
                     mode: "sv",
@@ -20,21 +23,31 @@
                         onChange(val);
                     },
                 });
-            }, 0);
 
-            return container;
-        },
+                return container;
+            },
 
-        preview: function ({ value }) {
-            const pre = document.createElement("pre");
-            pre.textContent = value || "";
-            return pre;
-        },
-    };
+            preview: function ({ value }) {
+                const pre = document.createElement("pre");
+                pre.textContent = value || "";
+                return pre;
+            },
+        };
 
-    CMS.registerWidget(
-        VditorMarkdownWidget.id,
-        VditorMarkdownWidget.control,
-        VditorMarkdownWidget.preview
-    );
+        window.CMS.registerWidget(
+            VditorMarkdownWidget.id,
+            VditorMarkdownWidget.control,
+            VditorMarkdownWidget.preview
+        );
+
+        console.log("[vditor] widget registered");
+        return true;
+    }
+
+    // 轮询等待 CMS 就绪（Decap 官方推荐做法之一）
+    const timer = setInterval(() => {
+        if (register()) {
+            clearInterval(timer);
+        }
+    }, 50);
 })();
