@@ -29,7 +29,7 @@ import edgeoneAdapter from "@edgeone/astro";
 // https://astro.build/config
 export default defineConfig({
 	adapter: edgeoneAdapter(),
-	site: "https://astro.yum9.in",
+	site: "https://www.yumehinata.com",
 	base: "/",
 	trailingSlash: "always",
 	integrations: [
