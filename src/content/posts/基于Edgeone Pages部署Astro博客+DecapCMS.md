@@ -2,7 +2,7 @@
 title: 【笔记】基于Edgeone Pages部署Fuwari(Astro)博客+DecapCMS
 published: 2026-01-31
 description: astro博客部署其实并不复杂，复杂的主要是decap的适配工作
-image: pximg.yumehinata.com/artworks/140579886
+image: https://pximg.yumehinata.com/artworks/140579886
 tags:
   - Astro
   - Fuwari
