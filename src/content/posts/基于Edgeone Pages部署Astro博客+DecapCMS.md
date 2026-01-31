@@ -76,8 +76,8 @@ collections:
       - { label: "分类", name: "category", widget: "string", required: false }
       - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
       - { label: "正文", name: "body", widget: "markdown" }
-media_folder: "./images" # 文件将被存储在仓库中的位置
-public_folder: "./images" # 上传媒体文件的 src 属性
+media_folder: "/src/content/posts/images" # 文件将被存储在仓库中的位置
+# public_folder: "./images" # 上传媒体文件的 src 属性
 backend:
   name: github
   repo: "你的github用户名/博客仓库"
@@ -99,4 +99,4 @@ backend:
 与其说疑难杂症更应该说是未解决的问题。
 1. Fuwari会对图片资源进行优化，所以你必须使用`./xxxx/xxxx.jpg`或者`./xxx.png`这样相对路径，绝对不要用`/src/ports/images`或`src/posts/images`这样的路径，或者就使用fastly、github raw、jsdelivr的绝对路径。
 2. yaml和yml在edgeone直接引用一定会出问题，包括json文件也有可能遭遇这个问题，所以你只能用fastly、github raw、jsdelivr，但是需要注意，fastly和jsdelivr具有缓存时间，并不是你实时上传的内容，而jsdelivr与github raw在部分地区被污染无法正常使用。
-3. DecapCMS的配置文件虽然写了`./images`这样的相对路径，但是实际在你复制资源的路径时他给你的会是`images/xxxx.jpg`这样的格式，这会导致第一条提到的问题，这大概是Fuwari特有的问题，请自行修改使用或自己修改Decap的代码来一步到位实现。
+3. DecapCMS的配置文件必须得写`posts/images`相对路径（相对于文件根目录），所以实际在你复制资源的路径时他给你的会是`posts/images/xxxx.jpg`这样的格式，这会导致第一条提到的问题，这大概是Fuwari特有的问题，请自行修改为`./images/xxxx.jpg`使用（Fuwari的编译时，根目录应该为文档文件所在目录为根目录）或自己修改Decap的代码来一步到位实现。
