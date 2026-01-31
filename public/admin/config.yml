@@ -19,5 +19,5 @@ backend:
   repo: "YumeHinata/AstroBlog"
   branch: "main"
   api_root: "https://api.github.com"
-  site_url: "https://astro.yum9.in"
+  site_url: "https://www.yumehinata.com"
   auth_endpoint: "auth"
