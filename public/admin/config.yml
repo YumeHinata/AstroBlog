@@ -11,7 +11,7 @@ collections:
       - { label: "标签", name: "tags", widget: "list", required: false }
       - { label: "分类", name: "category", widget: "string", required: false }
       - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
-      - { label: "正文", name: "body", widget: "markdown" }
+      - { label: "正文", name: "body", widget: "vditor-markdown" }
 media_folder: "/src/content/posts/images" # 文件将被存储在仓库中的位置
 # public_folder: "./images" # 上传媒体文件的 src 属性
 backend:
