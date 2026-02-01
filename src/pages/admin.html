@@ -19,14 +19,19 @@
   <div id="debug-info" style="display:none;">加载中...</div>
   <script src="/admin/vditor/index.min.js"></script>
   <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
-  <script src="/admin/vditor-replace.js"></script>
-  <script src="/admin/debug-widget.js"></script>
+
+  <!-- 加载调试脚本 -->
+  <script src="/admin/debug-cms-api.js"></script>
+
+  <!-- 加载官方方式 widget -->
+  <script src="/admin/vditor-widget-official.js"></script>
 
   <script>
-    console.log('加载顺序: React -> Vditor -> Decap CMS -> vditor-minimal');
-    console.log('React:', typeof React);
-    console.log('Vditor:', typeof Vditor);
-    console.log('CMS:', typeof CMS);
+    console.log('=== 加载顺序 ===');
+    console.log('1. React:', typeof React);
+    console.log('2. ReactDOM:', typeof ReactDOM);
+    console.log('3. Vditor:', typeof Vditor);
+    console.log('4. CMS:', typeof CMS);
   </script>
 </body>
 
