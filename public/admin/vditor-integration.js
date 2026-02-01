@@ -1,4 +1,4 @@
-// vditor-integration.js
+// vditor-integration-simple.js
 (function() {
   // 等待所有依赖加载完成
   function waitForDependencies() {
@@ -10,149 +10,142 @@
   }
 
   function initVditorWidget() {
-    console.log('初始化 Vditor Widget...');
-    
-    // 检查 CMS API
-    console.log('CMS API 检查:');
-    console.log('- CMS.registerWidget:', typeof CMS.registerWidget);
-    console.log('- CMS.createClass:', typeof CMS.createClass); // 这个应该不存在
-    console.log('- CMS.h:', typeof CMS.h);
-    console.log('- CMS.React:', typeof CMS.React);
-    
-    // 尝试获取 React 和 createElement
-    const React = CMS.React || (window.React);
-    const h = CMS.h || (React && React.createElement);
-    
-    if (!h) {
-      console.error('无法获取 React.createElement');
-      return;
-    }
-    
-    console.log('React:', React ? '已找到' : '未找到');
-    console.log('h (createElement):', h ? '已找到' : '未找到');
+    console.log('初始化 Vditor Widget (简单版)...');
     
     // 创建一个全局的 Vditor 实例管理器
     const vditorInstances = {};
+    let widgetIdCounter = 0;
     
-    // 使用 ES6 类定义控件组件
-    class VditorControl extends React.Component {
-      constructor(props) {
-        super(props);
-        
-        // 生成唯一的容器 ID
-        this.containerId = 'vditor-' + Date.now() + '-' + Math.random().toString(36).substr(2);
-        this.vditor = null;
-        
-        console.log('VditorControl 构造函数，containerId:', this.containerId);
-      }
+    // 控件工厂函数
+    function createVditorControl() {
+      const id = ++widgetIdCounter;
+      const containerId = 'vditor-' + id + '-' + Date.now();
       
-      componentDidMount() {
-        console.log('VditorControl 组件挂载');
-        
-        // 延迟初始化，确保 DOM 已经渲染
-        setTimeout(() => {
-          this.initVditor();
-        }, 200);
-      }
+      let vditorInstance = null;
       
-      initVditor() {
-        const container = document.getElementById(this.containerId);
-        if (!container) {
-          console.error('找不到容器元素:', this.containerId);
-          return;
-        }
-        
-        // 清理容器
-        container.innerHTML = '';
-        
-        // 获取值，确保是字符串
-        let value = this.props.value;
-        if (value && typeof value === 'object' && value.toString) {
-          value = value.toString();
-        } else if (value === undefined || value === null) {
-          value = '';
-        }
-        
-        console.log('Vditor 初始值:', typeof value, '长度:', value.length);
-        
-        try {
-          // 初始化 Vditor
-          this.vditor = new window.Vditor(container, {
-            height: 500,
-            mode: 'sv',
-            cache: { enable: false },
-            value: value,
-            input: (newValue) => {
-              console.log('Vditor 输入变化');
-              this.props.onChange(newValue);
-            },
-            blur: () => {
-              console.log('Vditor 失焦');
-            },
-            focus: () => {
-              console.log('Vditor 聚焦');
-            },
-            after: () => {
-              console.log('Vditor 初始化完成');
-            }
-          });
+      // 返回一个符合 Decap CMS 期望的控件对象
+      return {
+        // Decap CMS 会调用这个方法来渲染控件
+        render: function(element, value, field, metadata) {
+          console.log('渲染 Vditor 控件，containerId:', containerId);
           
-          // 保存实例引用
-          vditorInstances[this.containerId] = this.vditor;
-        } catch (error) {
-          console.error('Vditor 初始化错误:', error);
-        }
-      }
-      
-      componentWillUnmount() {
-        console.log('VditorControl 组件卸载');
-        
-        // 销毁 Vditor 实例
-        if (this.vditor) {
+          // 创建容器
+          const container = document.createElement('div');
+          container.id = containerId;
+          container.style.minHeight = '500px';
+          container.style.border = '1px solid #ddd';
+          container.style.borderRadius = '4px';
+          container.style.overflow = 'hidden';
+          
+          // 将容器添加到提供的元素中
+          element.appendChild(container);
+          
+          // 获取初始值
+          const initialValue = value || '';
+          console.log('初始值:', initialValue.length, '字符');
+          
+          // 初始化 Vditor
           try {
-            this.vditor.destroy();
-            delete vditorInstances[this.containerId];
+            vditorInstance = new window.Vditor(container, {
+              height: 500,
+              mode: 'sv',
+              cache: { enable: false },
+              value: initialValue,
+              input: (newValue) => {
+                console.log('Vditor 输入变化');
+                // 触发值变化事件
+                if (element.dispatchEvent) {
+                  const event = new CustomEvent('change', {
+                    detail: { value: newValue }
+                  });
+                  element.dispatchEvent(event);
+                }
+              },
+              after: () => {
+                console.log('Vditor 初始化完成');
+              }
+            });
+            
+            vditorInstances[containerId] = vditorInstance;
           } catch (error) {
-            console.error('Vditor 销毁错误:', error);
+            console.error('Vditor 初始化错误:', error);
+          }
+          
+          return container;
+        },
+        
+        // 当控件被销毁时调用
+        destroy: function() {
+          console.log('销毁 Vditor 控件:', containerId);
+          
+          if (vditorInstance) {
+            try {
+              vditorInstance.destroy();
+              delete vditorInstances[containerId];
+            } catch (error) {
+              console.error('Vditor 销毁错误:', error);
+            }
+          }
+        },
+        
+        // 获取当前值
+        getValue: function() {
+          if (vditorInstance) {
+            return vditorInstance.getValue();
+          }
+          return '';
+        },
+        
+        // 设置值
+        setValue: function(value) {
+          if (vditorInstance && value !== undefined) {
+            vditorInstance.setValue(value || '');
           }
         }
-      }
-      
-      render() {
-        console.log('渲染 VditorControl');
-        
-        // 使用 h (React.createElement) 创建元素
-        return h('div', {
-          id: this.containerId,
-          key: this.containerId,
-          style: {
-            minHeight: '500px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            overflow: 'hidden'
-          }
-        });
-      }
+      };
     }
     
-    // 预览组件 - 使用函数组件
-    const VditorPreview = (props) => {
-      const value = props.value || '';
-      return h('div', {
-        style: {
-          whiteSpace: 'pre-wrap',
-          fontFamily: 'monospace',
-          padding: '10px',
-          backgroundColor: '#f5f5f5',
-          borderRadius: '4px'
+    // 预览组件工厂函数
+    function createVditorPreview() {
+      return {
+        render: function(element, value) {
+          console.log('渲染预览');
+          
+          const preview = document.createElement('div');
+          preview.style.whiteSpace = 'pre-wrap';
+          preview.style.fontFamily = 'monospace';
+          preview.style.padding = '10px';
+          preview.style.backgroundColor = '#f5f5f5';
+          preview.style.borderRadius = '4px';
+          preview.textContent = value || '';
+          
+          element.appendChild(preview);
+          return preview;
         }
-      }, value);
-    };
+      };
+    }
     
     // 注册 widget
     try {
-      CMS.registerWidget('vditor-markdown', VditorControl, VditorPreview);
-      console.log('✅ Vditor widget 注册成功');
+      // Decap CMS 3.x 的 registerWidget 可能需要不同的格式
+      // 尝试不同的注册方式
+      
+      // 方式1：直接注册工厂函数
+      if (typeof CMS.registerWidget === 'function') {
+        CMS.registerWidget('vditor-markdown', createVditorControl, createVditorPreview);
+        console.log('✅ Vditor widget 注册成功 (方式1)');
+      } 
+      // 方式2：尝试注册为对象
+      else if (CMS.registerWidget) {
+        CMS.registerWidget({
+          name: 'vditor-markdown',
+          control: createVditorControl(),
+          preview: createVditorPreview()
+        });
+        console.log('✅ Vditor widget 注册成功 (方式2)');
+      } else {
+        console.error('❌ 无法找到 CMS.registerWidget 方法');
+      }
     } catch (error) {
       console.error('❌ Vditor widget 注册失败:', error);
     }
