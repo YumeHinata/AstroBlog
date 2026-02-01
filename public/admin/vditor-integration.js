@@ -12,32 +12,53 @@
   function initVditorWidget() {
     console.log('初始化 Vditor Widget...');
     
-    const { createClass, h } = CMS;
+    // 检查 CMS API
+    console.log('CMS API 检查:');
+    console.log('- CMS.registerWidget:', typeof CMS.registerWidget);
+    console.log('- CMS.createClass:', typeof CMS.createClass); // 这个应该不存在
+    console.log('- CMS.h:', typeof CMS.h);
+    console.log('- CMS.React:', typeof CMS.React);
+    
+    // 尝试获取 React 和 createElement
+    const React = CMS.React || (window.React);
+    const h = CMS.h || (React && React.createElement);
+    
+    if (!h) {
+      console.error('无法获取 React.createElement');
+      return;
+    }
+    
+    console.log('React:', React ? '已找到' : '未找到');
+    console.log('h (createElement):', h ? '已找到' : '未找到');
     
     // 创建一个全局的 Vditor 实例管理器
     const vditorInstances = {};
     
-    // 控件组件
-    const VditorControl = createClass({
-      getInitialState() {
-        return {
-          containerId: 'vditor-' + Date.now() + '-' + Math.random().toString(36).substr(2)
-        };
-      },
+    // 使用 ES6 类定义控件组件
+    class VditorControl extends React.Component {
+      constructor(props) {
+        super(props);
+        
+        // 生成唯一的容器 ID
+        this.containerId = 'vditor-' + Date.now() + '-' + Math.random().toString(36).substr(2);
+        this.vditor = null;
+        
+        console.log('VditorControl 构造函数，containerId:', this.containerId);
+      }
       
       componentDidMount() {
-        console.log('VditorControl 挂载，containerId:', this.state.containerId);
+        console.log('VditorControl 组件挂载');
         
         // 延迟初始化，确保 DOM 已经渲染
         setTimeout(() => {
           this.initVditor();
         }, 200);
-      },
+      }
       
       initVditor() {
-        const container = document.getElementById(this.state.containerId);
+        const container = document.getElementById(this.containerId);
         if (!container) {
-          console.error('找不到容器元素:', this.state.containerId);
+          console.error('找不到容器元素:', this.containerId);
           return;
         }
         
@@ -52,11 +73,11 @@
           value = '';
         }
         
-        console.log('Vditor 初始值:', typeof value, value);
+        console.log('Vditor 初始值:', typeof value, '长度:', value.length);
         
         try {
           // 初始化 Vditor
-          const vditor = new window.Vditor(container, {
+          this.vditor = new window.Vditor(container, {
             height: 500,
             mode: 'sv',
             cache: { enable: false },
@@ -77,31 +98,33 @@
           });
           
           // 保存实例引用
-          vditorInstances[this.state.containerId] = vditor;
+          vditorInstances[this.containerId] = this.vditor;
         } catch (error) {
           console.error('Vditor 初始化错误:', error);
         }
-      },
+      }
       
       componentWillUnmount() {
+        console.log('VditorControl 组件卸载');
+        
         // 销毁 Vditor 实例
-        if (vditorInstances[this.state.containerId]) {
+        if (this.vditor) {
           try {
-            vditorInstances[this.state.containerId].destroy();
-            delete vditorInstances[this.state.containerId];
+            this.vditor.destroy();
+            delete vditorInstances[this.containerId];
           } catch (error) {
             console.error('Vditor 销毁错误:', error);
           }
         }
-      },
+      }
       
       render() {
         console.log('渲染 VditorControl');
         
-        // 返回一个简单的 div 元素
+        // 使用 h (React.createElement) 创建元素
         return h('div', {
-          id: this.state.containerId,
-          key: this.state.containerId,
+          id: this.containerId,
+          key: this.containerId,
           style: {
             minHeight: '500px',
             border: '1px solid #ddd',
@@ -110,23 +133,21 @@
           }
         });
       }
-    });
+    }
     
-    // 预览组件
-    const VditorPreview = createClass({
-      render() {
-        const value = this.props.value || '';
-        return h('div', {
-          style: {
-            whiteSpace: 'pre-wrap',
-            fontFamily: 'monospace',
-            padding: '10px',
-            backgroundColor: '#f5f5f5',
-            borderRadius: '4px'
-          }
-        }, value);
-      }
-    });
+    // 预览组件 - 使用函数组件
+    const VditorPreview = (props) => {
+      const value = props.value || '';
+      return h('div', {
+        style: {
+          whiteSpace: 'pre-wrap',
+          fontFamily: 'monospace',
+          padding: '10px',
+          backgroundColor: '#f5f5f5',
+          borderRadius: '4px'
+        }
+      }, value);
+    };
     
     // 注册 widget
     try {
