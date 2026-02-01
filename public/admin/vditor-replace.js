@@ -1,342 +1,301 @@
-// vditor-replace.js
-(function() {
-  // 配置
-  const CONFIG = {
-    targetWidget: 'markdown', // 要替换的原始widget类型
-    customWidget: 'vditor-markdown', // 在config.yml中使用的widget名称
-    vditorOptions: {
-      height: 600,
-      mode: 'sv', // 所见即所得模式
-      cache: { enable: false },
-      toolbar: [
-        'emoji',
-        'headings',
-        'bold',
-        'italic',
-        'strike',
-        'link',
-        '|',
-        'list',
-        'ordered-list',
-        'check',
-        'outdent',
-        'indent',
-        '|',
-        'quote',
-        'line',
-        'code',
-        'inline-code',
-        'insert-before',
-        'insert-after',
-        '|',
-        'table',
-        'upload',
-        '|',
-        'undo',
-        'redo',
-        '|',
-        'fullscreen',
-        'preview',
-        'both',
-        'outline',
-        'code-theme',
-        'content-theme'
-      ]
-    }
-  };
+// vditor-minimal.js
+(function () {
+  console.log('=== 开始加载 Vditor 最简 widget ===');
 
-  console.log('Vditor替换脚本加载...');
-
-  // 等待Decap CMS完全加载
+  // 等待 Decap CMS 完全加载
   function waitForCMS() {
     if (window.CMS && window.Vditor) {
-      console.log('依赖已加载，开始初始化...');
-      init();
+      console.log('✅ 依赖已加载');
+      console.log('CMS.registerWidget:', typeof CMS.registerWidget);
+      console.log('CMS.h:', typeof CMS.h);
+      console.log('CMS.createClass:', typeof CMS.createClass);
+      initSimpleWidget();
     } else {
-      console.log('等待依赖... CMS:', !!window.CMS, 'Vditor:', !!window.Vditor);
+      console.log('⏳ 等待依赖...');
       setTimeout(waitForCMS, 100);
     }
   }
 
-  // 监视DOM变化，检测编辑器出现
-  function observeDOM() {
-    console.log('开始监视DOM变化...');
-    
-    // 创建MutationObserver来检测编辑器出现
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
-        if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
-          mutation.addedNodes.forEach(function(node) {
-            if (node.nodeType === 1) { // 元素节点
-              // 检查是否有markdown编辑器
-              if (node.querySelector && (
-                node.querySelector('[data-slate-editor]') || // Decap CMS的编辑器
-                node.querySelector('.cms-editor') || // 编辑器类名
-                node.querySelector('textarea[data-schema]') // 文本域
-              )) {
-                console.log('检测到编辑器节点，开始替换...');
-                replaceEditors();
-              }
+  function initSimpleWidget() {
+    console.log('🚀 初始化最简 widget...');
+
+    try {
+      // 方法1: 尝试使用 CMS.createClass (如果存在)
+      if (typeof CMS.createClass === 'function') {
+        console.log('使用 CMS.createClass');
+        createWithCreateClass();
+      }
+      // 方法2: 尝试使用 React 直接创建组件
+      else if (window.React && window.React.Component) {
+        console.log('使用 React.Component');
+        createWithReactComponent();
+      }
+      // 方法3: 尝试使用 Decap CMS 的新 API
+      else {
+        console.log('尝试使用 registerWidget 直接注册');
+        createWithSimpleObject();
+      }
+    } catch (error) {
+      console.error('❌ 初始化失败:', error);
+    }
+  }
+
+  // 方法1: 使用 CMS.createClass (最符合 Decap CMS 文档)
+  function createWithCreateClass() {
+    const { createClass, h } = CMS;
+
+    // 控件组件
+    const VditorControl = createClass({
+      componentDidMount: function () {
+        console.log('📌 VditorControl 挂载');
+        console.log('this.props:', this.props);
+        console.log('this.props.value:', this.props.value);
+
+        // 确保有容器元素
+        if (!this.container) {
+          console.error('❌ 没有容器元素');
+          return;
+        }
+
+        // 初始化 Vditor
+        try {
+          console.log('🎨 初始化 Vditor...');
+          this.vditor = new Vditor(this.container, {
+            height: 400,
+            mode: 'sv',
+            cache: { enable: false },
+            value: this.props.value || '',
+            input: function (value) {
+              console.log('✏️ Vditor 输入:', value.length, '字符');
             }
           });
+          console.log('✅ Vditor 初始化成功');
+        } catch (error) {
+          console.error('❌ Vditor 初始化失败:', error);
         }
-      });
-    });
+      },
 
-    // 开始观察整个body
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true
-    });
-  }
+      componentWillUnmount: function () {
+        console.log('🗑️ VditorControl 卸载');
+        if (this.vditor) {
+          this.vditor.destroy();
+        }
+      },
 
-  // 查找并替换所有markdown编辑器
-  function replaceEditors() {
-    console.log('搜索要替换的编辑器...');
-    
-    // 方法1：查找所有可能的编辑器容器
-    const selectors = [
-      '[data-slate-editor]', // Decap CMS的Slate编辑器
-      '.cms-widget-markdown', // markdown widget容器
-      'textarea[data-schema]', // 文本域
-      '.cms-control-markdown', // markdown控件
-      'div[data-testid="editor"]' // 可能的测试标识
-    ];
-    
-    let found = false;
-    
-    selectors.forEach(selector => {
-      const editors = document.querySelectorAll(selector);
-      if (editors.length > 0) {
-        console.log(`找到 ${editors.length} 个编辑器 (${selector})`);
-        editors.forEach(editor => replaceEditor(editor, selector));
-        found = true;
+      render: function () {
+        console.log('🖌️ 渲染 VditorControl');
+
+        // 使用 h 函数创建一个简单的 div
+        const element = h('div', {
+          ref: (el) => {
+            console.log('🔗 ref 回调被调用，el:', el);
+            this.container = el;
+          },
+          style: {
+            minHeight: '400px',
+            border: '2px solid #007bff',
+            borderRadius: '4px',
+            padding: '10px',
+            backgroundColor: '#f8f9fa'
+          }
+        });
+
+        console.log('创建的 element:', element);
+        return element;
       }
     });
-    
-    if (!found) {
-      console.log('未找到匹配的编辑器，使用备用方法...');
-      // 备用方法：查找所有包含"body"字段的控件
-      setTimeout(findEditorsByLabel, 500);
-    }
-  }
 
-  // 备用方法：通过标签查找编辑器
-  function findEditorsByLabel() {
-    console.log('通过标签查找编辑器...');
-    
-    // 查找包含"正文"或"body"的标签
-    const labels = document.querySelectorAll('label');
-    labels.forEach(label => {
-      const labelText = label.textContent.toLowerCase();
-      if (labelText.includes('正文') || labelText.includes('body')) {
-        console.log('找到body字段标签:', labelText);
-        
-        // 找到对应的控件容器
-        let control = label.nextElementSibling || label.parentElement.nextElementSibling;
-        while (control && !control.classList.contains('cms-control') && !control.querySelector('textarea')) {
-          control = control.nextElementSibling;
-        }
-        
-        if (control && (control.classList.contains('cms-control') || control.querySelector('textarea'))) {
-          console.log('找到对应的编辑器控件');
-          replaceEditor(control, 'label-sibling');
-        }
+    // 预览组件
+    const VditorPreview = createClass({
+      render: function () {
+        const value = this.props.value || '';
+        console.log('预览组件渲染，值长度:', value.length);
+        return h('div', {
+          style: {
+            padding: '10px',
+            backgroundColor: '#e9ecef',
+            borderRadius: '4px',
+            border: '1px solid #dee2e6'
+          }
+        }, '预览: ' + (value.length > 100 ? value.substring(0, 100) + '...' : value));
       }
     });
+
+    // 注册 widget
+    console.log('📝 注册 widget: vditor-markdown');
+    CMS.registerWidget('vditor-markdown', VditorControl, VditorPreview);
+    console.log('✅ Widget 注册完成');
   }
 
-  // 替换单个编辑器
-  function replaceEditor(originalElement, selector) {
-    // 检查是否已经替换过
-    if (originalElement.getAttribute('data-vditor-replaced')) {
+  // 方法2: 使用 React.Component
+  function createWithReactComponent() {
+    console.log('🔧 尝试使用 React.Component 创建');
+
+    // 获取 React
+    const React = window.React;
+    const h = CMS.h || React.createElement;
+
+    if (!h) {
+      console.error('❌ 没有找到 createElement 方法');
       return;
     }
-    
-    console.log(`替换编辑器: ${selector}`);
-    
-    // 保存原始元素和值
-    const original = {
-      element: originalElement,
-      value: getValueFromElement(originalElement),
-      isVisible: true
-    };
-    
-    // 隐藏原始编辑器（但不移除，这样Decap CMS仍能获取值）
-    original.element.style.display = 'none';
-    original.element.setAttribute('data-vditor-original', 'true');
-    
-    // 创建Vditor容器
-    const container = document.createElement('div');
-    container.className = 'vditor-container';
-    container.setAttribute('data-vditor-id', Date.now());
-    
-    // 插入到原始编辑器之前
-    original.element.parentNode.insertBefore(container, original.element);
-    
-    // 初始化Vditor
-    try {
-      console.log('初始化Vditor，初始值:', original.value);
-      
-      const vditor = new Vditor(container, {
-        ...CONFIG.vditorOptions,
-        value: original.value || '',
-        input: function(value) {
-          console.log('Vditor内容变化，同步到原始编辑器');
-          setValueToElement(original.element, value);
-          
-          // 触发事件让Decap CMS知道值变化了
-          triggerChangeEvent(original.element, value);
-        }
-      });
-      
-      // 标记为已替换
-      original.element.setAttribute('data-vditor-replaced', 'true');
-      container.setAttribute('data-vditor-instance', 'true');
-      
-      console.log('Vditor替换成功');
-      
-      // 监听原始编辑器的变化（以防其他方式修改值）
-      observeOriginalElement(original.element, vditor);
-      
-    } catch (error) {
-      console.error('Vditor初始化失败:', error);
-      // 失败时恢复原始编辑器
-      original.element.style.display = '';
-    }
-  }
 
-  // 从原始元素获取值
-  function getValueFromElement(element) {
-    // 尝试不同的方法获取值
-    if (element.tagName === 'TEXTAREA') {
-      return element.value;
-    }
-    
-    // 尝试查找内部的textarea
-    const textarea = element.querySelector('textarea');
-    if (textarea) {
-      return textarea.value;
-    }
-    
-    // 尝试获取data-value属性
-    const dataValue = element.getAttribute('data-value');
-    if (dataValue) {
-      return dataValue;
-    }
-    
-    // 检查是否包含特定的编辑器内容
-    const editorContent = element.querySelector('[contenteditable="true"]');
-    if (editorContent) {
-      return editorContent.textContent;
-    }
-    
-    console.log('无法从元素获取值，返回空字符串');
-    return '';
-  }
-
-  // 设置值到原始元素
-  function setValueToElement(element, value) {
-    // 尝试不同的方法设置值
-    if (element.tagName === 'TEXTAREA') {
-      element.value = value;
-      return true;
-    }
-    
-    // 尝试查找内部的textarea
-    const textarea = element.querySelector('textarea');
-    if (textarea) {
-      textarea.value = value;
-      return true;
-    }
-    
-    // 设置data-value属性作为备选
-    element.setAttribute('data-value', value);
-    
-    console.log('设置值到元素，值长度:', value.length);
-    return false;
-  }
-
-  // 触发变化事件
-  function triggerChangeEvent(element, value) {
-    // 创建并触发input事件
-    const inputEvent = new Event('input', { bubbles: true, cancelable: true });
-    element.dispatchEvent(inputEvent);
-    
-    // 创建并触发change事件
-    const changeEvent = new Event('change', { bubbles: true, cancelable: true });
-    element.dispatchEvent(changeEvent);
-    
-    // 尝试触发React的onChange
-    if (element.onchange && typeof element.onchange === 'function') {
-      element.onchange({ target: { value: value } });
-    }
-    
-    console.log('已触发变化事件');
-  }
-
-  // 观察原始元素的变化
-  function observeOriginalElement(element, vditor) {
-    const observer = new MutationObserver(function(mutations) {
-      mutations.forEach(function(mutation) {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'data-value') {
-          const newValue = element.getAttribute('data-value');
-          if (newValue !== null) {
-            console.log('原始元素值变化，同步到Vditor');
-            vditor.setValue(newValue);
-          }
-        }
-      });
-    });
-    
-    // 开始观察
-    observer.observe(element, {
-      attributes: true,
-      attributeFilter: ['data-value', 'value']
-    });
-    
-    // 监听input事件
-    element.addEventListener('input', function(e) {
-      if (e.target.value !== undefined) {
-        vditor.setValue(e.target.value);
+    // 创建 React 类组件
+    class VditorControl extends React.Component {
+      constructor(props) {
+        super(props);
+        console.log('📌 VditorControl 构造函数');
+        this.containerRef = React.createRef();
       }
-    });
+
+      componentDidMount() {
+        console.log('📌 VditorControl 组件挂载');
+        console.log('props:', this.props);
+
+        if (!this.containerRef.current) {
+          console.error('❌ 没有容器引用');
+          return;
+        }
+
+        try {
+          console.log('🎨 初始化 Vditor...');
+          this.vditor = new Vditor(this.containerRef.current, {
+            height: 400,
+            mode: 'sv',
+            cache: { enable: false },
+            value: this.props.value || '',
+            input: (value) => {
+              console.log('✏️ Vditor 输入:', value.length, '字符');
+              // 暂时不处理 onChange
+            }
+          });
+          console.log('✅ Vditor 初始化成功');
+        } catch (error) {
+          console.error('❌ Vditor 初始化失败:', error);
+        }
+      }
+
+      componentWillUnmount() {
+        console.log('🗑️ VditorControl 组件卸载');
+        if (this.vditor) {
+          this.vditor.destroy();
+        }
+      }
+
+      render() {
+        console.log('🖌️ 渲染 VditorControl');
+        return h('div', {
+          ref: this.containerRef,
+          style: {
+            minHeight: '400px',
+            border: '2px solid #28a745',
+            borderRadius: '4px',
+            padding: '10px',
+            backgroundColor: '#d4edda'
+          }
+        });
+      }
+    }
+
+    // 预览组件
+    const VditorPreview = (props) => {
+      const value = props.value || '';
+      console.log('预览组件渲染，值长度:', value.length);
+      return h('div', {
+        style: {
+          padding: '10px',
+          backgroundColor: '#d1ecf1',
+          borderRadius: '4px',
+          border: '1px solid #bee5eb'
+        }
+      }, '预览内容: ' + (value.length > 50 ? value.substring(0, 50) + '...' : value));
+    };
+
+    // 注册 widget
+    console.log('📝 注册 widget: vditor-markdown (React.Component)');
+    CMS.registerWidget('vditor-markdown', VditorControl, VditorPreview);
+    console.log('✅ Widget 注册完成');
   }
 
-  // 主初始化函数
-  function init() {
-    console.log('初始化Vditor替换系统...');
-    
-    // 先尝试立即查找并替换
-    setTimeout(replaceEditors, 500);
-    
-    // 然后开始监视DOM变化
-    observeDOM();
-    
-    // 监听路由变化（单页应用）
-    window.addEventListener('popstate', function() {
-      console.log('路由变化，重新查找编辑器...');
-      setTimeout(replaceEditors, 1000);
-    });
-    
-    // 监听hash变化
-    window.addEventListener('hashchange', function() {
-      console.log('hash变化，重新查找编辑器...');
-      setTimeout(replaceEditors, 1000);
-    });
-    
-    console.log('Vditor替换系统已启动');
+  // 方法3: 最简单的对象形式
+  function createWithSimpleObject() {
+    console.log('🔧 尝试最简单的对象形式');
+
+    // 创建一个简单的控件对象
+    const VditorControl = {
+      // 这个方法会被 Decap CMS 调用以渲染控件
+      render: function (opts) {
+        console.log('🖌️ 简单对象 render 被调用');
+        console.log('opts:', opts);
+
+        const element = document.createElement('div');
+        element.id = 'vditor-simple-' + Date.now();
+        element.style.minHeight = '400px';
+        element.style.border = '2px solid #ffc107';
+        element.style.borderRadius = '4px';
+        element.style.padding = '10px';
+        element.style.backgroundColor = '#fff3cd';
+        element.innerHTML = '<div style="padding: 20px; text-align: center; color: #856404;">Vditor 编辑器 (简单模式)</div>';
+
+        // 将元素返回给 Decap CMS
+        return element;
+      }
+    };
+
+    // 预览组件
+    const VditorPreview = {
+      render: function (opts) {
+        console.log('预览组件 render 被调用');
+        const element = document.createElement('div');
+        element.style.padding = '10px';
+        element.style.backgroundColor = '#e2e3e5';
+        element.style.borderRadius = '4px';
+        element.textContent = '这是 Vditor 预览';
+        return element;
+      }
+    };
+
+    // 尝试不同的注册方式
+    try {
+      console.log('📝 尝试注册 widget (对象形式)');
+
+      // 方式1: 直接传递对象
+      if (CMS.registerWidget.length === 1) {
+        CMS.registerWidget({
+          name: 'vditor-markdown',
+          control: VditorControl,
+          preview: VditorPreview
+        });
+      }
+      // 方式2: 传递三个参数
+      else if (CMS.registerWidget.length === 3) {
+        CMS.registerWidget('vditor-markdown', VditorControl, VditorPreview);
+      }
+      // 方式3: 尝试使用不同的 API
+      else {
+        console.log('尝试使用 CMS.registerEditorComponent');
+        if (CMS.registerEditorComponent) {
+          CMS.registerEditorComponent({
+            id: 'vditor-markdown',
+            label: 'Vditor',
+            widget: 'vditor-markdown',
+            type: 'vditor-markdown'
+          });
+        }
+      }
+
+      console.log('✅ Widget 注册完成 (简单对象)');
+    } catch (error) {
+      console.error('❌ Widget 注册失败:', error);
+    }
   }
 
   // 启动
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM加载完成，等待CMS...');
-    waitForCMS();
-  });
-  
-  // 如果DOM已经加载完成
-  if (document.readyState === 'interactive' || document.readyState === 'complete') {
-    console.log('DOM已准备，等待CMS...');
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', waitForCMS);
+  } else {
     waitForCMS();
   }
+
+  console.log('=== Vditor 最简 widget 脚本加载完成 ===');
 })();

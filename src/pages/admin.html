@@ -12,15 +12,21 @@
 </head>
 
 <body>
+  <!-- 加载 React 用于调试 -->
+  <script crossorigin src="https://unpkg.com/react@17/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+
   <div id="debug-info" style="display:none;">加载中...</div>
   <script src="/admin/vditor/index.min.js"></script>
   <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
   <script src="/admin/vditor-replace.js"></script>
+  <script src="/admin/debug-widget.js"></script>
+
   <script>
-    // 额外的调试
-    console.log('脚本加载顺序: Vditor -> Decap CMS -> 集成脚本');
-    console.log('Vditor 可用:', typeof Vditor !== 'undefined');
-    console.log('Decap CMS 可用:', typeof CMS !== 'undefined');
+    console.log('加载顺序: React -> Vditor -> Decap CMS -> vditor-minimal');
+    console.log('React:', typeof React);
+    console.log('Vditor:', typeof Vditor);
+    console.log('CMS:', typeof CMS);
   </script>
 </body>
 
