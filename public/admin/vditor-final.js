@@ -1,546 +1,294 @@
-// vditor-final.js - DOM拦截与替换方案 (绕过CMS内部机制)
+// vditor-final.js - 终极定位与注入方案
 (function() {
-  'use strict';
+    'use strict';
+    console.log('🔍 Vditor 终极注入脚本开始加载...');
 
-  console.log('🎯 启动 Vditor DOM 拦截引擎...');
+    // 配置：这里需要你确认或调整选择器
+    const CONFIG = {
+        // 尝试寻找“正文”字段的标签或容器（根据你的CMS界面语言调整）
+        fieldLabelText: ['正文', 'Body', '内容', 'Content', 'Markdown'],
+        // 用于查找编辑器区域的父容器选择器
+        editorAreaSelector: '.css-hn3jn7-EditorContainer, .cms-editor, [class*="EditorContainer"], .nc-editor',
+        // 轮询查找的最大时间和间隔
+        maxPollTime: 20000, // 20秒
+        pollInterval: 500,
+        debug: true
+    };
 
-  // ==================== 配置 ====================
-  const CONFIG = {
-    // 要拦截的原始编辑器选择器 (根据你的CMS版本调整)
-    targetSelectors: [
-      '.cms-editor-markdown',          // 常见类名
-      '.nc-markdownWidget-container',  // 常见类名
-      'textarea[data-slate-editor]',   // 可能的textarea编辑器
-      '.CodeMirror',                   // CodeMirror编辑器
-      '[class*="markdown"]',           // 包含'markdown'的类
-      '.cms-widget-markdown'           // 另一种常见类名
-    ],
-    pollInterval: 1000,                // 检查DOM变化的间隔(毫秒)
-    maxPollTime: 30000,                // 最长轮询时间(30秒)
-    debug: true,
-    // 保险策略：同时尝试传统注册
-    enableTraditionalRegister: true
-  };
+    // ===== 状态 =====
+    let isInjected = false;
+    let pollTimer = null;
+    let pollStartTime = null;
 
-  // ==================== 状态 ====================
-  let pollTimer = null;
-  let pollStartTime = 0;
-  let replacedEditors = new Set(); // 记录已替换的编辑器ID
-  let vditorInstances = new Map(); // 管理Vditor实例
-
-  // ==================== 日志工具 ====================
-  function debugLog(...args) {
-    if (CONFIG.debug) console.log('[Vditor拦截]', ...args);
-  }
-
-  // ==================== 核心函数：查找目标编辑器 ====================
-  function findTargetEditors() {
-    const editors = [];
-    
-    // 方法1: 通过配置的选择器查找
-    CONFIG.targetSelectors.forEach(selector => {
-      try {
-        const elements = document.querySelectorAll(selector);
-        elements.forEach(el => {
-          if (!el.__vditor_replaced && !editors.includes(el)) {
-            editors.push(el);
-          }
-        });
-      } catch (e) {
-        // 忽略选择器错误
-      }
-    });
-
-    // 方法2: 查找所有可能是编辑器的元素
-    if (editors.length === 0) {
-      const potentialEditors = document.querySelectorAll('textarea, div[contenteditable="true"], .cms-editor, [class*="Editor"], [class*="editor"]');
-      potentialEditors.forEach(el => {
-        // 通过尺寸和位置判断是否是主要内容编辑器
-        const rect = el.getBoundingClientRect();
-        const isLargeEditor = rect.width > 400 && rect.height > 200;
-        const hasMarkdownClass = el.className && (
-          el.className.includes('markdown') || 
-          el.className.includes('Markdown') ||
-          el.className.includes('md-')
-        );
-        
-        if ((isLargeEditor || hasMarkdownClass) && !el.__vditor_replaced) {
-          editors.push(el);
-        }
-      });
+    // ===== 日志 =====
+    function log(...args) {
+        if (CONFIG.debug) console.log('[Vditor注入]', ...args);
     }
 
-    debugLog(`找到 ${editors.length} 个待处理编辑器`);
-    return editors;
-  }
+    // ===== 核心函数：寻找目标编辑器容器 =====
+    function findTargetEditorContainer() {
+        log('正在扫描页面，寻找正文编辑器...');
 
-  // ==================== 核心函数：用Vditor替换编辑器 ====================
-  function replaceEditorWithVditor(originalElement) {
-    if (!originalElement || !originalElement.parentNode) {
-      debugLog('原始元素无效或无父节点');
-      return false;
-    }
+        // 方法1：通过字段标签文本寻找
+        for (const labelText of CONFIG.fieldLabelText) {
+            // 寻找包含“正文”等文本的标签元素
+            const labels = Array.from(document.querySelectorAll('label, .cms-label, [class*="Label"]'))
+                .filter(el => el.textContent && el.textContent.trim().includes(labelText));
 
-    const originalId = originalElement.id || `vditor-original-${Date.now()}`;
-    const vditorId = `vditor-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // 标记已处理，避免重复处理
-    originalElement.__vditor_replaced = true;
-    replacedEditors.add(originalId);
-    
-    debugLog(`开始替换编辑器: ${originalId} -> ${vditorId}`, {
-      标签名: originalElement.tagName,
-      类名: originalElement.className,
-      尺寸: `${originalElement.offsetWidth}×${originalElement.offsetHeight}`
-    });
-
-    try {
-      // 1. 保存原始编辑器的值
-      let originalValue = '';
-      if (originalElement.tagName === 'TEXTAREA') {
-        originalValue = originalElement.value || '';
-      } else if (originalElement.isContentEditable || originalElement.querySelector('[contenteditable="true"]')) {
-        originalValue = originalElement.textContent || originalElement.innerHTML || '';
-      } else {
-        // 尝试从可能的数据属性中获取值
-        originalValue = originalElement.dataset.value || 
-                        originalElement.getAttribute('value') || 
-                        '';
-      }
-
-      // 2. 创建Vditor容器
-      const vditorContainer = document.createElement('div');
-      vditorContainer.id = vditorId;
-      vditorContainer.className = 'vditor-replaced-container';
-      vditorContainer.style.cssText = `
-        width: 100%;
-        min-height: 500px;
-        position: relative;
-        border: 2px solid #10b981;
-        border-radius: 8px;
-        margin: 10px 0;
-        overflow: hidden;
-      `;
-
-      // 3. 添加状态指示器
-      const statusIndicator = document.createElement('div');
-      statusIndicator.style.cssText = `
-        position: absolute;
-        top: 5px;
-        right: 5px;
-        z-index: 100;
-        background: #10b981;
-        color: white;
-        padding: 2px 8px;
-        border-radius: 10px;
-        font-size: 10px;
-        font-weight: bold;
-        opacity: 0.8;
-      `;
-      statusIndicator.textContent = 'Vditor';
-      vditorContainer.appendChild(statusIndicator);
-
-      // 4. 在原始位置插入Vditor容器
-      originalElement.parentNode.insertBefore(vditorContainer, originalElement);
-      
-      // 5. 隐藏原始编辑器（而不是移除，以防万一）
-      originalElement.style.cssText = `
-        position: absolute !important;
-        left: -9999px !important;
-        width: 1px !important;
-        height: 1px !important;
-        opacity: 0 !important;
-        pointer-events: none !important;
-      `;
-
-      // 6. 初始化Vditor
-      setTimeout(() => {
-        try {
-          const vditor = new Vditor(vditorId, {
-            height: 500,
-            placeholder: '由拦截引擎加载的 Vditor 编辑器...',
-            value: originalValue,
-            theme: 'classic',
-            toolbar: [
-              'emoji', 'headings', 'bold', 'italic', 'strike', 'link',
-              '|', 'list', 'ordered-list', 'check',
-              '|', 'quote', 'code', 'inline-code', 'table',
-              '|', 'undo', 'redo', 'preview', 'fullscreen'
-            ],
-            input: (value) => {
-              // 同步回原始编辑器（保持CMS数据流）
-              if (originalElement.tagName === 'TEXTAREA') {
-                originalElement.value = value;
-              }
-              
-              // 触发可能的事件
-              const event = new Event('input', { bubbles: true });
-              originalElement.dispatchEvent(event);
-              
-              debugLog(`编辑器输入同步: ${vditorId}`, value.length);
-            },
-            cache: { enable: false }
-          });
-
-          // 存储Vditor实例引用
-          vditorInstances.set(vditorId, {
-            instance: vditor,
-            originalElement: originalElement,
-            container: vditorContainer
-          });
-
-          debugLog(`✅ 成功替换: ${originalId} -> ${vditorId}`);
-
-          // 7. 添加成功标记
-          const successBadge = document.createElement('div');
-          successBadge.style.cssText = `
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            background: rgba(16, 185, 129, 0.1);
-            color: #10b981;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 9px;
-            border: 1px solid #10b981;
-          `;
-          successBadge.textContent = '✓ 已启用';
-          vditorContainer.appendChild(successBadge);
-
-        } catch (vditorError) {
-          debugLog(`❌ Vditor初始化失败: ${vditorError.message}`);
-          
-          // 恢复显示原始编辑器
-          originalElement.style.cssText = '';
-          vditorContainer.remove();
-          originalElement.__vditor_replaced = false;
-          replacedEditors.delete(originalId);
-          
-          // 显示错误信息
-          const errorDiv = document.createElement('div');
-          errorDiv.style.cssText = `
-            padding: 20px;
-            background: #fed7d7;
-            color: #742a2a;
-            border: 2px dashed #e53e3e;
-            border-radius: 8px;
-            margin: 10px 0;
-          `;
-          errorDiv.innerHTML = `
-            <strong>Vditor 加载失败</strong><br>
-            <small>${vditorError.message || '未知错误'}</small><br>
-            <button onclick="this.parentElement.nextElementSibling.style.display='block';this.remove()" 
-              style="margin-top:10px; padding:4px 8px; background:#e53e3e; color:white; border:none; border-radius:4px; cursor:pointer;">
-              显示原始编辑器
-            </button>
-          `;
-          
-          originalElement.parentNode.insertBefore(errorDiv, originalElement);
-          originalElement.style.display = 'block';
-        }
-      }, 100);
-
-      return true;
-
-    } catch (error) {
-      debugLog(`❌ 替换过程出错: ${error.message}`);
-      originalElement.__vditor_replaced = false;
-      replacedEditors.delete(originalId);
-      return false;
-    }
-  }
-
-  // ==================== 轮询监控函数 ====================
-  function startEditorPolling() {
-    if (pollTimer) {
-      clearInterval(pollTimer);
-    }
-
-    pollStartTime = Date.now();
-    let pollCount = 0;
-
-    pollTimer = setInterval(() => {
-      pollCount++;
-      
-      // 安全检查：超时停止
-      if (Date.now() - pollStartTime > CONFIG.maxPollTime) {
-        debugLog(`轮询超时 (${CONFIG.maxPollTime}ms)，停止监控`);
-        clearInterval(pollTimer);
-        return;
-      }
-
-      debugLog(`第 ${pollCount} 次轮询检查...`);
-      
-      // 查找并替换编辑器
-      const targetEditors = findTargetEditors();
-      let replacedCount = 0;
-
-      targetEditors.forEach(editor => {
-        if (replaceEditorWithVditor(editor)) {
-          replacedCount++;
-        }
-      });
-
-      if (replacedCount > 0) {
-        debugLog(`🎉 本轮替换了 ${replacedCount} 个编辑器`);
-      }
-
-      // 如果找到了CMS根容器，可以更精确地监控
-      const cmsRoot = document.querySelector('.cms-root, .nc-root, #cms-root, [data-netlify-cms-root]');
-      if (cmsRoot && !cmsRoot.__vditor_observed) {
-        setupMutationObserver(cmsRoot);
-      }
-
-    }, CONFIG.pollInterval);
-  }
-
-  // ==================== 突变观察器 (更高效的监控) ====================
-  function setupMutationObserver(rootElement) {
-    if (!rootElement || rootElement.__vditor_observed) return;
-
-    debugLog('设置突变观察器以监控DOM变化');
-    
-    const observer = new MutationObserver((mutations) => {
-      let shouldCheck = false;
-      
-      mutations.forEach(mutation => {
-        // 检查是否有新增的节点可能是编辑器
-        if (mutation.addedNodes && mutation.addedNodes.length > 0) {
-          for (let node of mutation.addedNodes) {
-            if (node.nodeType === 1) { // 元素节点
-              const isEditorLike = node.querySelector && (
-                node.querySelector('textarea') || 
-                node.querySelector('[contenteditable="true"]') ||
-                node.className && (
-                  node.className.includes('markdown') ||
-                  node.className.includes('editor') ||
-                  node.className.includes('Editor')
-                )
-              );
-              
-              if (isEditorLike) {
-                shouldCheck = true;
-                break;
-              }
-            }
-          }
-        }
-      });
-
-      if (shouldCheck) {
-        debugLog('检测到可能的编辑器DOM变化，立即检查');
-        setTimeout(() => {
-          const editors = findTargetEditors();
-          editors.forEach(editor => {
-            if (!editor.__vditor_replaced) {
-              replaceEditorWithVditor(editor);
-            }
-          });
-        }, 300);
-      }
-    });
-
-    observer.observe(rootElement, {
-      childList: true,
-      subtree: true,
-      attributes: false,
-      characterData: false
-    });
-
-    rootElement.__vditor_observed = true;
-    rootElement.__vditor_observer = observer;
-  }
-
-  // ==================== 传统注册方法 (备用) ====================
-  function attemptTraditionalRegistration() {
-    if (!CONFIG.enableTraditionalRegister || !window.CMS || !window.createClass) return;
-    
-    try {
-      const VditorControl = createClass({
-        getInitialState: function() {
-          this._editorId = `vditor-registered-${Date.now()}`;
-          return { value: this.props.value || '' };
-        },
-        componentDidMount: function() {
-          setTimeout(() => {
-            const container = document.getElementById(this._editorId);
-            if (container) {
-              new Vditor(this._editorId, {
-                height: 400,
-                value: this.state.value,
-                input: (value) => {
-                  if (this.props.onChange) this.props.onChange(value);
+            for (const label of labels) {
+                log(`找到疑似标签: "${label.textContent.trim()}"`);
+                // 尝试找到这个标签关联的编辑器区域（通常在其后面或父容器内）
+                let editorContainer = label.nextElementSibling;
+                while (editorContainer && !editorContainer.matches(CONFIG.editorAreaSelector)) {
+                    editorContainer = editorContainer.nextElementSibling;
                 }
-              });
+                if (editorContainer && editorContainer.matches(CONFIG.editorAreaSelector)) {
+                    log(`✅ 通过标签找到编辑器容器`);
+                    return editorContainer;
+                }
+                // 如果在后面找不到，尝试在父级容器内找
+                const parent = label.closest('.cms-field, .nc-field, [class*="Field"]');
+                if (parent) {
+                    const editor = parent.querySelector(CONFIG.editorAreaSelector);
+                    if (editor) {
+                        log(`✅ 在标签父容器内找到编辑器`);
+                        return editor;
+                    }
+                }
             }
-          }, 100);
-        },
-        render: function() {
-          return h('div', { id: this._editorId, style: { minHeight: '400px' } });
         }
-      });
 
-      CMS.registerWidget('vditor-markdown', VditorControl);
-      debugLog('✅ 已通过传统方法注册 vditor-markdown 控件');
-    } catch (e) {
-      debugLog(`传统注册失败: ${e.message}`);
-    }
-  }
+        // 方法2：通过已知的编辑器容器选择器寻找
+        log('尝试通过选择器直接查找...');
+        const editorContainers = document.querySelectorAll(CONFIG.editorAreaSelector);
+        log(`找到 ${editorContainers.length} 个编辑器容器`);
+        
+        // 如果有多个，尝试通过尺寸或位置找出最可能是“正文”的那个（通常是最大的）
+        if (editorContainers.length > 0) {
+            const editorsArray = Array.from(editorContainers);
+            // 按面积排序，假设最大的那个是正文编辑器
+            editorsArray.sort((a, b) => {
+                const rectA = a.getBoundingClientRect();
+                const rectB = b.getBoundingClientRect();
+                return (rectB.width * rectB.height) - (rectA.width * rectA.height);
+            });
+            log(`选择面积最大的容器作为目标 (${editorsArray[0].className})`);
+            return editorsArray[0];
+        }
 
-  // ==================== 全局管理接口 ====================
-  window.__vditorInterceptor = {
-    status: () => ({
-      polling: !!pollTimer,
-      replacedCount: replacedEditors.size,
-      instances: vditorInstances.size,
-      startTime: pollStartTime,
-      config: CONFIG
-    }),
-    
-    listReplaced: () => Array.from(replacedEditors),
-    
-    listInstances: () => Array.from(vditorInstances.keys()),
-    
-    forceReplace: () => {
-      debugLog('手动触发替换检查...');
-      const editors = findTargetEditors();
-      editors.forEach(replaceEditorWithVditor);
-      return editors.length;
-    },
-    
-    destroyAll: () => {
-      vditorInstances.forEach((data, id) => {
-        try {
-          data.instance.destroy();
-          if (data.originalElement) {
-            data.originalElement.style.cssText = '';
-          }
-          if (data.container) {
-            data.container.remove();
-          }
-        } catch (e) {}
-      });
-      vditorInstances.clear();
-      replacedEditors.clear();
-      debugLog('已销毁所有Vditor实例');
-    },
-    
-    stopPolling: () => {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-        debugLog('已停止轮询监控');
-      }
-    }
-  };
-
-  // ==================== 初始化 ====================
-  function initialize() {
-    debugLog('初始化拦截引擎...');
-    
-    // 等待Vditor库加载
-    if (typeof Vditor === 'undefined') {
-      debugLog('Vditor库未加载，等待中...');
-      setTimeout(initialize, 500);
-      return;
+        log('❌ 未找到目标编辑器容器');
+        return null;
     }
 
-    debugLog('✅ Vditor库已就绪，版本:', Vditor.version);
-    
-    // 尝试传统注册（备用）
-    attemptTraditionalRegistration();
-    
-    // 启动轮询监控
-    startEditorPolling();
-    
-    // 设置全局DOM监控
-    setupMutationObserver(document.body);
-    
-    debugLog('🚀 Vditor拦截引擎已启动');
-    
-    // 添加可视化状态指示器
-    addStatusIndicator();
-  }
+    // ===== 核心函数：注入Vditor并替换原始编辑器 =====
+    function injectVditor(targetContainer) {
+        if (!targetContainer || isInjected) return false;
+        log('开始注入 Vditor...');
 
-  // ==================== 状态指示器 ====================
-  function addStatusIndicator() {
-    const indicator = document.createElement('div');
-    indicator.id = 'vditor-status-indicator';
-    indicator.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      left: 20px;
-      background: #10b981;
-      color: white;
-      padding: 10px 15px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
-      z-index: 10000;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      font-family: system-ui, -apple-system, sans-serif;
-    `;
-    
-    const dot = document.createElement('div');
-    dot.style.cssText = `
-      width: 8px;
-      height: 8px;
-      background: #fff;
-      border-radius: 50%;
-      animation: pulse 1.5s infinite;
-    `;
-    
-    const text = document.createElement('span');
-    text.textContent = 'Vditor 拦截器运行中';
-    
-    // 添加动画样式
-    const style = document.createElement('style');
-    style.textContent = `
-      @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-      }
-    `;
-    document.head.appendChild(style);
-    
-    indicator.appendChild(dot);
-    indicator.appendChild(text);
-    
-    // 点击显示状态信息
-    indicator.addEventListener('click', () => {
-      const status = window.__vditorInterceptor.status();
-      alert(`Vditor 拦截器状态:\n\n` +
-            `已替换编辑器: ${status.replacedCount} 个\n` +
-            `运行时间: ${Math.round((Date.now() - status.startTime) / 1000)} 秒\n` +
-            `轮询状态: ${status.polling ? '运行中' : '已停止'}\n\n` +
-            `在控制台使用 window.__vditorInterceptor 管理`);
-    });
-    
-    document.body.appendChild(indicator);
-    
-    // 5秒后自动半透明
-    setTimeout(() => {
-      indicator.style.opacity = '0.7';
-      indicator.style.transition = 'opacity 0.5s';
-    }, 5000);
-  }
+        // 1. 尝试从原始编辑器获取当前值（如果存在）
+        let initialValue = '';
+        // 查找可能的原始文本区域或内容可编辑div
+        const originalTextarea = targetContainer.querySelector('textarea');
+        const editableDiv = targetContainer.querySelector('[contenteditable="true"]');
+        if (originalTextarea) {
+            initialValue = originalTextarea.value || '';
+            log(`从 textarea 获取初始值，长度: ${initialValue.length}`);
+        } else if (editableDiv) {
+            initialValue = editableDiv.textContent || editableDiv.innerText || '';
+            log(`从 contenteditable div 获取初始值，长度: ${initialValue.length}`);
+        }
 
-  // ==================== 启动 ====================
-  // 等待页面基本就绪
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initialize, 1000); // 额外等待确保CMS初始化
-    });
-  } else {
-    setTimeout(initialize, 1000);
-  }
+        // 2. 生成唯一ID
+        const vditorId = `vditor-main-${Date.now()}`;
 
-  console.log('🎯 Vditor DOM拦截引擎脚本加载完成');
-  console.log('💡 页面加载后将自动扫描并替换markdown编辑器');
-  console.log('💡 使用 window.__vditorInterceptor 管理拦截器');
+        // 3. 创建Vditor容器
+        const vditorWrapper = document.createElement('div');
+        vditorWrapper.id = `wrapper-${vditorId}`;
+        vditorWrapper.style.cssText = `
+            width: 100%;
+            min-height: 600px;
+            position: relative;
+            border: 3px solid #10b981; /* 绿色边框便于识别 */
+            border-radius: 8px;
+            margin: 15px 0;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        `;
+
+        const vditorContainer = document.createElement('div');
+        vditorContainer.id = vditorId;
+        vditorContainer.style.cssText = 'width:100%; height:100%; min-height:600px;';
+        vditorWrapper.appendChild(vditorContainer);
+
+        // 4. 在目标位置插入Vditor（替换或插入在原始容器旁边）
+        targetContainer.parentNode.insertBefore(vditorWrapper, targetContainer);
+        // 隐藏原始编辑器，但保留在DOM中（以防CMS需要它）
+        targetContainer.style.cssText = 'display: none !important;';
+
+        // 5. 初始化Vditor
+        setTimeout(() => {
+            try {
+                log(`正在初始化 Vditor (ID: ${vditorId})...`);
+                const vditor = new Vditor(vditorId, {
+                    height: 600,
+                    placeholder: '开始撰写文章内容...（由 Vditor 提供支持）',
+                    value: initialValue,
+                    theme: 'classic',
+                    icon: 'ant',
+                    toolbar: [
+                        'emoji', 'headings', 'bold', 'italic', 'strike', 'link',
+                        '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
+                        '|', 'quote', 'line', 'code', 'inline-code', 'insert-before', 'insert-after',
+                        '|', 'upload', 'table',
+                        '|', 'undo', 'redo',
+                        '|', 'fullscreen', 'preview', 'outline'
+                    ],
+                    input: (value) => {
+                        // 将值同步回隐藏的原始编辑器，确保CMS能捕获到数据
+                        if (originalTextarea) {
+                            originalTextarea.value = value;
+                            // 触发input事件，让CMS知道值已改变
+                            const inputEvent = new Event('input', { bubbles: true });
+                            originalTextarea.dispatchEvent(inputEvent);
+                        }
+                        log(`编辑器内容变更，长度: ${value.length}`);
+                    },
+                    cache: { enable: false }
+                });
+
+                // 6. 标记成功并添加状态标识
+                isInjected = true;
+                log('🎉 Vditor 注入成功！');
+
+                // 添加成功标识
+                const badge = document.createElement('div');
+                badge.style.cssText = `
+                    position: absolute;
+                    top: 10px;
+                    right: 10px;
+                    background: #10b981;
+                    color: white;
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    z-index: 1000;
+                    opacity: 0.9;
+                `;
+                badge.textContent = 'Vditor ✓';
+                vditorWrapper.appendChild(badge);
+
+                // 存储引用，便于后续管理
+                window.__vditorMainInstance = vditor;
+                window.__vditorTargetContainer = targetContainer;
+
+            } catch (error) {
+                log(`❌ Vditor 初始化失败: ${error.message}`);
+                // 恢复显示原始编辑器
+                targetContainer.style.cssText = '';
+                vditorWrapper.remove();
+            }
+        }, 100);
+
+        return true;
+    }
+
+    // ===== 轮询与监控 =====
+    function startPolling() {
+        if (pollTimer) clearInterval(pollTimer);
+        
+        pollStartTime = Date.now();
+        log(`启动轮询，最多等待 ${CONFIG.maxPollTime/1000} 秒`);
+
+        pollTimer = setInterval(() => {
+            // 检查是否超时
+            if (Date.now() - pollStartTime > CONFIG.maxPollTime) {
+                log('轮询超时，停止查找');
+                clearInterval(pollTimer);
+                return;
+            }
+
+            // 如果已注入，停止轮询
+            if (isInjected) {
+                clearInterval(pollTimer);
+                log('已注入成功，停止轮询');
+                return;
+            }
+
+            // 每次轮询都尝试查找并注入
+            const target = findTargetEditorContainer();
+            if (target) {
+                log('找到目标，尝试注入...');
+                if (injectVditor(target)) {
+                    clearInterval(pollTimer);
+                }
+            }
+        }, CONFIG.pollInterval);
+    }
+
+    // ===== 监控路由变化（单页应用的关键） =====
+    function setupRouteMonitoring() {
+        let lastHash = window.location.hash;
+        
+        setInterval(() => {
+            const currentHash = window.location.hash;
+            // 如果哈希变化且进入了编辑界面（包含 collections/terminal/entries 或 new）
+            if (currentHash !== lastHash && 
+                (currentHash.includes('collections/terminal/entries/') || 
+                 currentHash.includes('collections/terminal/new'))) {
+                log(`检测到路由变化到编辑页: ${currentHash}`);
+                lastHash = currentHash;
+                
+                // 重置注入状态，等待新编辑器出现
+                isInjected = false;
+                // 短暂的延迟后重新开始轮询，等待新DOM渲染
+                setTimeout(() => {
+                    if (!isInjected) startPolling();
+                }, 1000);
+            }
+        }, 500);
+    }
+
+    // ===== 初始化 =====
+    function init() {
+        log('初始化注入引擎...');
+        
+        // 等待必要的依赖
+        if (typeof Vditor === 'undefined') {
+            log('Vditor 库未加载，等待中...');
+            setTimeout(init, 500);
+            return;
+        }
+        log('✅ Vditor 库已加载');
+
+        // 启动轮询查找
+        startPolling();
+        
+        // 监控路由变化
+        setupRouteMonitoring();
+
+        // 暴露控制函数到全局，便于手动调试
+        window.__injectVditorManual = function() {
+            log('手动触发注入...');
+            const target = findTargetEditorContainer();
+            if (target) {
+                return injectVditor(target);
+            } else {
+                log('未找到目标，无法手动注入');
+                return false;
+            }
+        };
+
+        log('注入引擎初始化完成。');
+        log('如果自动注入失败，可以在控制台执行: __injectVditorManual()');
+    }
+
+    // ===== 启动 =====
+    // 确保在DOM加载后执行
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+    } else {
+        // 如果DOM早已就绪，直接初始化
+        setTimeout(init, 1000); // 延迟1秒，确保CMS框架已启动
+    }
 })();
