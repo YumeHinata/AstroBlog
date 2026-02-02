@@ -15,14 +15,19 @@
 <body>
   <script src="/admin/vditor/index.min.js"></script>
   <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
-
+  <script src="/admin/vditor-plugin/uploader.js"></script>
   <script src="/admin/vditor-plugin/index.js"></script>
   <script>
-    console.log('=== 加载顺序 ===');
-    console.log('1. Vditor:', typeof Vditor);
-    console.log('2. CMS:', typeof CMS);
-    console.log('3. createClass:', typeof createClass);
-    console.log('4. h:', typeof h);
+    // 简化的加载检查
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        console.log('📋 加载状态检查:');
+        console.log('- Vditor:', typeof Vditor);
+        console.log('- CMS:', typeof CMS);
+        console.log('- 上传模块:', window.vditorUploader ? '就绪' : '未加载');
+        console.log('- 插件:', window.decapCmsVditorPlugin ? '已注册' : '未注册');
+      }, 2000);
+    });
   </script>
 </body>
 
