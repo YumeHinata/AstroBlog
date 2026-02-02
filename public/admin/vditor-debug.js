@@ -1,36 +1,126 @@
-// vditor-debug.js - 调试工具
+// vditor-debug.js - Vditor Widget 调试器
 (function() {
-    console.log('=== Vditor 调试模式启动 ===');
+    console.log('=== Vditor Widget 调试器 ===');
     
-    // 拦截并记录 CMS.registerWidget 调用
-    if (window.CMS && typeof CMS.registerWidget === 'function') {
-        const originalRegisterWidget = CMS.registerWidget;
-        CMS.registerWidget = function(name, widget) {
-            console.log('🔍 CMS.registerWidget 被调用:', [name, widget]);
-            
-            // 记录已注册的 widget
-            if (!window.__vditorWidgets) {
-                window.__vditorWidgets = {};
+    // 存储日志和错误
+    var logs = [];
+    var errors = [];
+    
+    // 原始方法拦截
+    if (window.CMS) {
+        // 拦截 registerWidget
+        var originalRegisterWidget = CMS.registerWidget;
+        if (originalRegisterWidget) {
+            CMS.registerWidget = function() {
+                console.log('🔍 CMS.registerWidget 被调用:', Array.from(arguments));
+                logs.push({
+                    type: 'registerWidget',
+                    args: Array.from(arguments),
+                    time: new Date().toISOString()
+                });
+                return originalRegisterWidget.apply(this, arguments);
+            };
+        }
+        
+        // 拦截 getWidget
+        var originalGetWidget = CMS.getWidget;
+        if (originalGetWidget) {
+            CMS.getWidget = function() {
+                var result = originalGetWidget.apply(this, arguments);
+                console.log('🔍 CMS.getWidget 被调用:', Array.from(arguments), '返回:', result);
+                logs.push({
+                    type: 'getWidget',
+                    args: Array.from(arguments),
+                    result: result,
+                    time: new Date().toISOString()
+                });
+                return result;
+            };
+        }
+    }
+    
+    // 调试命令
+    window.debugVditor = {
+        // 列出所有已注册的 widget
+        listWidgets: function() {
+            if (!CMS || !CMS.getWidgets) {
+                console.log('❌ CMS.getWidgets 不可用');
+                return null;
             }
-            window.__vditorWidgets[name] = widget;
-            console.log('📦 Widget "' + name + '" 已记录');
             
-            return originalRegisterWidget.apply(this, arguments);
-        };
-    }
-    
-    // 拦截并记录 CMS.getWidget 调用
-    if (window.CMS && typeof CMS.getWidget === 'function') {
-        const originalGetWidget = CMS.getWidget;
-        CMS.getWidget = function(name) {
-            const result = originalGetWidget.apply(this, arguments);
-            console.log('🔍 CMS.getWidget("' + name + '") 返回:', result);
-            return result;
-        };
-    }
-    
-    // 暴露调试工具到全局
-    window.__vditorDebug = {
+            try {
+                var widgets = CMS.getWidgets();
+                console.log('📋 已注册的 widgets:');
+                for (var i = 0; i < widgets.length; i++) {
+                    var widget = widgets[i];
+                    console.log(`  ${i}:`, widget);
+                }
+                return widgets;
+            } catch (error) {
+                console.log('❌ 获取 widgets 失败:', error);
+                return null;
+            }
+        },
+        
+        // 检查特定 widget
+        checkWidget: function(name) {
+            if (!CMS || !CMS.getWidget) {
+                console.log('❌ CMS.getWidget 不可用');
+                return null;
+            }
+            
+            try {
+                var widget = CMS.getWidget(name);
+                console.log(`🔍 Widget "${name}":`, widget);
+                return widget;
+            } catch (error) {
+                console.log(`❌ 获取 widget "${name}" 失败:`, error);
+                return null;
+            }
+        },
+        
+        // 显示错误日志
+        showErrors: function() {
+            console.log('📛 错误日志:', errors);
+            return errors;
+        },
+        
+        // 显示最近日志
+        showLogs: function() {
+            console.log('📝 最近日志:', logs.slice(-10));
+            return logs;
+        },
+        
+        // 测试 widget 渲染
+        testRender: function() {
+            if (!window.createClass || !window.h) {
+                console.log('❌ React 工具不可用');
+                return;
+            }
+            
+            try {
+                var TestWidget = createClass({
+                    render: function() {
+                        return h('div', {
+                            style: {
+                                border: '2px solid red',
+                                padding: '10px',
+                                margin: '10px'
+                            }
+                        }, '测试 Widget - ' + Date.now());
+                    }
+                });
+                
+                // 尝试注册
+                if (CMS && CMS.registerWidget) {
+                    CMS.registerWidget('test-render', TestWidget);
+                    console.log('✅ 测试渲染 widget 已注册');
+                }
+            } catch (error) {
+                console.log('❌ 测试渲染失败:', error);
+            }
+        },
+        
         // 检查环境
         checkEnvironment: function() {
             return {
@@ -40,52 +130,27 @@
                 h: typeof h,
                 Vditor: typeof Vditor,
                 CMS: typeof CMS,
-                registeredWidgets: window.__vditorWidgets ? Object.keys(window.__vditorWidgets) : []
+                CMS_version: window.CMS ? window.CMS.version : 'unknown'
             };
-        },
-        
-        // 创建测试 Vditor 实例
-        testVditor: function() {
-            const testDiv = document.createElement('div');
-            testDiv.id = 'test-vditor-' + Date.now();
-            testDiv.style.cssText = 'height:200px;width:500px;border:1px solid #ccc;margin:20px;';
-            document.body.appendChild(testDiv);
-            
-            try {
-                const vditor = new Vditor(testDiv.id, {
-                    height: 200,
-                    placeholder: '测试编辑器...',
-                    input: (value) => {
-                        console.log('测试编辑器输入:', value);
-                    }
-                });
-                console.log('✅ 测试 Vditor 实例创建成功');
-                return vditor;
-            } catch (error) {
-                console.error('❌ 测试 Vditor 创建失败:', error);
-                return null;
-            }
-        },
-        
-        // 验证当前 markdown 控件
-        verifyMarkdownWidget: function() {
-            if (!CMS) return 'CMS 未加载';
-            
-            const widget = CMS.getWidget('markdown');
-            if (!widget) return '找不到 markdown 控件';
-            
-            console.log('当前 markdown 控件结构:', {
-                control: widget.control,
-                preview: widget.preview,
-                schema: widget.schema
-            });
-            
-            return 'markdown 控件验证完成';
         }
     };
     
-    console.log('✅ Vditor 调试工具已加载');
-    console.log('使用 window.__vditorDebug 访问调试工具');
-    console.log('例如: window.__vditorDebug.checkEnvironment()');
-    console.log('=== Vditor 调试模式就绪 ===');
+    // 错误捕获
+    window.addEventListener('error', function(event) {
+        errors.push({
+            message: event.message,
+            filename: event.filename,
+            lineno: event.lineno,
+            colno: event.colno,
+            time: new Date().toISOString()
+        });
+    });
+    
+    console.log('✅ 调试器已加载，使用 window.debugVditor 访问调试命令');
+    console.log('可用命令:');
+    console.log('  debugVditor.listWidgets() - 列出所有已注册的 widget');
+    console.log('  debugVditor.checkWidget("vditor-markdown") - 检查特定 widget');
+    console.log('  debugVditor.showErrors() - 显示错误日志');
+    console.log('  debugVditor.showLogs() - 显示最近日志');
+    console.log('  debugVditor.testRender() - 测试 widget 渲染');
 })();
