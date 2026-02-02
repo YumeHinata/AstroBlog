@@ -1,0 +1,21 @@
+/* vditor-plugin/style.css */
+.vditor-plugin-container {
+    margin: 10px 0;
+}
+
+.vditor-preview {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+}
+
+/* 可选：调整 Vditor 工具栏样式 */
+.vditor-toolbar {
+    background   : #f9fafb !important;
+    border-bottom: 1px solid #e5e7eb !important;
+}
+
+/* 可选：调整编辑器内容区域 */
+.vditor-content {
+    font-size  : 16px !important;
+    line-height: 1.8 !important;
+}

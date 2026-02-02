@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <link rel="stylesheet" href="/admin/vditor/index.css" />
+  <link rel="stylesheet" href="/admin/vditor-plugin/style.css" />
   <link href="https://raw.githubusercontent.com/YumeHinata/AstroBlog/refs/heads/main/public/admin/config.yml"
     type="text/yaml" rel="cms-config-url" />
   <title>内容管理器</title>
@@ -15,18 +16,13 @@
   <script src="/admin/vditor/index.min.js"></script>
   <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
 
-  <!-- 加载调试器 -->
-  <script src="/admin/vditor-debug.js"></script>
-
-  <!-- 加载最终版 widget -->
-  <script src="/admin/vditor-final.js"></script>
-
+  <script src="/admin/vditor-plugin/index.js"></script>
   <script>
     console.log('=== 加载顺序 ===');
-    console.log('1. React:', typeof React);
-    console.log('2. ReactDOM:', typeof ReactDOM);
-    console.log('3. Vditor:', typeof Vditor);
-    console.log('4. CMS:', typeof CMS);
+    console.log('1. Vditor:', typeof Vditor);
+    console.log('2. CMS:', typeof CMS);
+    console.log('3. createClass:', typeof createClass);
+    console.log('4. h:', typeof h);
   </script>
 </body>
 
