@@ -1,77 +1,101 @@
-(function () {
+(function() {
   'use strict';
 
   if (window.decapCmsVditorPlugin) return;
-
-  // 工具函数：File -> Base64 (保持不变)
+  
+  // 工具函数：File -> Base64
   const fileToBase64 = (file) => new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = (error) => reject(error);
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
   });
 
   // 创建 Vditor 控件
   const VditorControl = createClass({
-    getInitialState: function () {
+    getInitialState: function() {
       this.id = 'vditor-' + Date.now();
+      // 用于保存实例引用，便于修复函数访问
+      this.vditorInstance = null;
       return { value: this.props.value || '', vditor: null };
     },
 
-    componentDidMount: function () {
+    componentDidMount: function() {
       const vditor = new Vditor(this.id, {
-        // --- 核心修复：设置模式为 'sv' (分屏预览/所见即所得) ---
-        mode: 'sv',
         height: 500,
         value: this.state.value,
-        // 保持工具栏始终可见（与之前有效配置一致）
-        toolbarConfig: {
-          pin: true
-        },
         after: () => {
           this.setState({ vditor: vditor });
+          this.vditorInstance = vditor;
+          // 关键修复：确保链接按钮能工作
+          this._fixLinkButton();
         },
         input: (value) => {
           this.setState({ value: value });
           this.props.onChange && this.props.onChange(value);
         },
-        // --- 上传配置 (保持Base64方案) ---
+        // 集成Base64上传
         upload: {
           accept: 'image/*',
-          multiple: true,
+          multiple: false, // 先设为单文件，更稳定
           handler: async (files) => {
-            const succMap = {};
-            const errFiles = [];
-            for (const file of files) {
-              try {
-                // 转换为Base64
-                const base64Url = await fileToBase64(file);
-                // 将文件名映射到Base64 URL
-                succMap[file.name] = base64Url;
-              } catch (error) {
-                errFiles.push(file.name);
-              }
+            // 简化处理，只处理第一个文件
+            const file = files[0];
+            if (!file) return { code: 1, msg: '无文件', data: { errFiles: [], succMap: {} } };
+            
+            try {
+              const base64Url = await fileToBase64(file);
+              return {
+                msg: '',
+                code: 0,
+                data: {
+                  errFiles: [],
+                  succMap: { [file.name]: base64Url }
+                }
+              };
+            } catch (error) {
+              return {
+                code: 1,
+                msg: '转换失败',
+                data: { errFiles: [file.name], succMap: {} }
+              };
             }
-            // 返回标准格式，在 'sv' 模式下，Vditor应能正确接收并插入
-            return {
-              msg: '',
-              code: 0,
-              data: { errFiles, succMap }
-            };
           }
-        },
-        // --- 可选：添加更明确的成功回调用于调试 ---
-        // success: (editor, msg) => {
-        //   console.log('上传成功，Vditor回调消息:', msg);
-        // }
+        }
       });
     },
 
-    componentWillUnmount: function () {
+    // 核心修复：确保链接按钮点击能插入文本
+    _fixLinkButton: function() {
+      // 等待DOM更新
+      setTimeout(() => {
+        const toolbar = document.querySelector('.vditor-toolbar');
+        if (!toolbar || !this.vditorInstance) return;
+
+        const linkButton = toolbar.querySelector('[data-type="link"]');
+        if (linkButton) {
+          // 移除可能存在的旧监听器，添加新的
+          linkButton.replaceWith(linkButton.cloneNode(true));
+          const newLinkButton = toolbar.querySelector('[data-type="link"]');
+          
+          newLinkButton.addEventListener('click', () => {
+            // 手动执行链接插入逻辑
+            if (this.vditorInstance && this.vditorInstance.insertValue) {
+              // 插入标准的链接标记，用户后续自行替换
+              this.vditorInstance.insertValue('[](https://example.com)');
+              // 将光标定位到中括号内，方便用户直接输入链接文字
+              // 注意：Vditor API 可能没有直接设置光标位置的方法，这里先确保插入
+            }
+          });
+        }
+      }, 500); // 稍等确保Vditor完全初始化
+    },
+
+    componentWillUnmount: function() {
       this.state.vditor && this.state.vditor.destroy();
     },
 
-    render: function () {
+    render: function() {
       return h('div', [
         h('textarea', {
           name: this.props.field ? this.props.field.get('name') : 'content',
@@ -89,6 +113,7 @@
       setTimeout(register, 100);
       return;
     }
+
     window.CMS.registerWidget('vditor', VditorControl);
     window.decapCmsVditorPlugin = true;
   }
