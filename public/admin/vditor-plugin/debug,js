@@ -1,0 +1,113 @@
+// vditor-plugin/debug.js - 数据同步调试工具
+(function() {
+  'use strict';
+  
+  console.log('🔧 Vditor 调试工具加载...');
+  
+  const DebugTool = {
+    // 监控Decap CMS表单提交
+    monitorSubmission() {
+      // 查找Decap CMS的提交按钮
+      const submitButtons = document.querySelectorAll('button[type="submit"], [class*="Publish"], [class*="Save"]');
+      
+      submitButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          console.log('=== 表单提交监控 ===');
+          console.log('提交按钮被点击:', btn.textContent.trim());
+          
+          // 收集所有隐藏的textarea值
+          const hiddenTextareas = document.querySelectorAll('textarea[style*="display: none"], textarea[style*="display:none"]');
+          console.log(`找到 ${hiddenTextareas.length} 个隐藏的textarea:`);
+          
+          hiddenTextareas.forEach((ta, i) => {
+            console.log(`  ${i}: name="${ta.name}" value.length=${ta.value.length}`);
+          });
+          
+          // 查找所有Vditor实例
+          const vditorContainers = document.querySelectorAll('[id^="vditor-"]');
+          console.log(`找到 ${vditorContainers.length} 个Vditor容器:`);
+          
+          vditorContainers.forEach((container, i) => {
+            const instance = window.Vditor && container.id && window.Vditor.instances && window.Vditor.instances[container.id];
+            if (instance) {
+              console.log(`  ${i}: ${container.id} 内容长度=${instance.getValue().length}`);
+            }
+          });
+        });
+      });
+      
+      console.log('✅ 表单提交监控已启用');
+    },
+    
+    // 检查CMS数据模型
+    checkCMSData() {
+      if (!window.CMS) {
+        console.log('CMS对象未找到');
+        return;
+      }
+      
+      // 尝试获取当前条目的数据
+      try {
+        const collections = window.CMS.collections;
+        console.log('CMS集合:', collections ? Object.keys(collections) : '无法访问');
+      } catch (e) {
+        console.log('无法直接访问CMS数据:', e.message);
+      }
+    },
+    
+    // 模拟表单提交
+    simulateSubmit() {
+      const event = new Event('submit', { bubbles: true, cancelable: true });
+      const forms = document.querySelectorAll('form');
+      forms.forEach(form => {
+        console.log('触发表单提交事件:', form);
+        form.dispatchEvent(event);
+      });
+    },
+    
+    // 检查控件props
+    checkWidgetProps() {
+      const widget = window.CMS && window.CMS.getWidget && window.CMS.getWidget('vditor');
+      if (!widget) {
+        console.log('vditor控件未找到');
+        return;
+      }
+      
+      console.log('控件信息:', {
+        控件存在: true,
+        控件类型: typeof widget.control,
+        预览类型: typeof widget.preview
+      });
+      
+      // 如果可能，创建一个测试实例
+      try {
+        const TestControl = widget.control;
+        const testInstance = new TestControl({
+          value: '测试内容',
+          field: { get: (key) => key === 'name' ? 'test' : null },
+          onChange: (val) => console.log('测试onChange:', val.length)
+        });
+        
+        console.log('测试实例创建成功:', testInstance);
+      } catch (e) {
+        console.log('无法创建测试实例:', e.message);
+      }
+    }
+  };
+  
+  // 暴露到全局
+  window.vditorDebug = DebugTool;
+  
+  // 自动启动监控
+  setTimeout(() => {
+    DebugTool.monitorSubmission();
+    DebugTool.checkWidgetProps();
+    
+    console.log('=== Vditor调试工具就绪 ===');
+    console.log('可用命令:');
+    console.log('  vditorDebug.monitorSubmission() - 监控表单提交');
+    console.log('  vditorDebug.checkCMSData() - 检查CMS数据');
+    console.log('  vditorDebug.simulateSubmit() - 模拟提交');
+    console.log('  vditorDebug.checkWidgetProps() - 检查控件属性');
+  }, 2000);
+})();
