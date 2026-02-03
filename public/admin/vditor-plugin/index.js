@@ -36,58 +36,37 @@
           upload: {
             accept: 'image/*',
             multiple: true,
-            // 设置一个合理的文件大小限制，避免文档过大 (Base64会膨胀约33%)
-            max: 20 * 1024 * 1024, // 修正为 5MB
-
+            max: 5 * 1024 * 1024, // 合理的大小限制
             handler: (files) => {
-              console.log('📤 上传处理器被调用，收到文件:', files);
-
-              // 使用 Promise.all 并行处理所有文件，结构更清晰
-              const filePromises = Array.from(files).map(file => {
-                return new Promise((resolveFile) => {
-                  console.log(`正在处理文件: ${file.name} (${file.size} bytes)`);
+              // 1. 保存必需引用
+              const vditor = this.vditor;
+              // 2. 处理文件为Base64
+              const promises = Array.from(files).map(file =>
+                new Promise(resolve => {
                   const reader = new FileReader();
-
-                  reader.onload = (e) => {
-                    const base64Str = e.target.result;
-                    console.log(`✅ 文件 ${file.name} 读取完成`);
-                    // 成功：返回文件名和构建好的Markdown图片字符串
-                    resolveFile({
-                      name: file.name,
-                      markdown: `![${file.name.replace(/\.[^/.]+$/, "")}](${base64Str})`
-                    });
-                  };
-
-                  reader.onerror = () => {
-                    console.error(`文件读取失败: ${file.name}`);
-                    // 失败：返回 null，后续过滤掉
-                    resolveFile(null);
-                  };
-
+                  reader.onload = e => resolve({
+                    name: file.name,
+                    markdown: `![${file.name.replace(/\.[^/.]+$/, '')}](${e.target.result})`
+                  });
+                  reader.onerror = () => resolve(null);
                   reader.readAsDataURL(file);
-                });
-              });
-
-              // 等待所有文件处理完毕
-              return Promise.all(filePromises).then(fileResults => {
-                // 过滤掉失败（null）的结果
-                const successFiles = fileResults.filter(item => item !== null);
-                console.log(`处理完成，成功 ${successFiles.length} 个，失败 ${fileResults.length - successFiles.length} 个`);
-
-                // 构建 Vditor 要求的返回格式
+                })
+              );
+              // 3. 执行上传逻辑
+              return Promise.all(promises).then(results => {
+                const success = results.filter(x => x);
                 const succMap = {};
-                successFiles.forEach(item => {
+                const markdownToInsert = [];
+                success.forEach(item => {
                   succMap[item.name] = item.markdown;
+                  markdownToInsert.push(item.markdown);
                 });
-
-                const finalResult = {
-                  code: 0,
-                  msg: successFiles.length === files.length ? '' : '部分文件处理失败',
-                  data: { succMap }
-                };
-
-                console.log('🎯 返回给Vditor的最终结果:', finalResult);
-                return finalResult;
+                // 4. 【关键优化】在返回前同步执行兜底插入，消除延迟
+                if (success.length > 0 && vditor && vditor.insertValue) {
+                  vditor.insertValue(markdownToInsert.join('\n'));
+                }
+                // 5. 返回标准结构（保证流程完整）
+                return { code: 0, msg: '', data: { succMap } };
               });
             }
           }
