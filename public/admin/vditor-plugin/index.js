@@ -1,108 +1,100 @@
-(function() {
+(function () {
   'use strict';
 
   if (window.decapCmsVditorPlugin) return;
-  console.log('🔄 Vditor 插件初始化...');
+  console.log('🔄 Vditor 插件初始化 (修复版)...');
 
-  // 自定义超链接按钮解决失焦问题
-  const customLinkToolbar = {
-    name: 'link',
-    tip: '插入链接',
-    className: 'toolbar__button',
-    icon: '<svg>...</svg>', // 建议使用与Vditor风格一致的SVG图标
-    click: function(event) {
-      const vditor = this; // Vditor实例
-      // 1. 执行默认的插入链接操作
-      vditor.tip = '插入链接';
-      vditor.insertValue(`[${vditor.vditor.currentModeValue || '链接描述'}](${vditor.vditor.currentModeValue ? '' : 'https://'})`);
-      // 2. 【核心修复】操作完成后，手动将焦点设置回编辑区域
-      setTimeout(() => {
-        vditor.focus();
-        // 如果有选中文本，可以调整光标位置到链接URL部分
-      }, 10);
-    }
-  };
-
-  // 创建编辑器控件 - 遵循 Decap CMS 插件规范
+  // 创建编辑器控件
   const VditorControl = createClass({
-    componentDidMount: function() {
+    componentDidMount: function () {
       this.initVditor();
     },
 
-    componentWillReceiveProps: function(nextProps) {
-      // 安全地更新编辑器内容
+    componentWillReceiveProps: function (nextProps) {
+      // 在props变化时安全更新编辑器内容
       if (this.vditor && nextProps.value !== this.props.value) {
         const currentValue = this.vditor.getValue();
-        if (nextProps.value !== currentValue) {
-          this.vditor.setValue(nextProps.value || '');
+        if (nextContent !== currentValue) {
+          this.vditor.setValue(nextContent);
         }
       }
     },
 
-    componentWillUnmount: function() {
-      // 安全销毁
+    componentWillUnmount: function () {
+      // 安全销毁：这是修复之前错误的关键
       if (this.vditor && typeof this.vditor.destroy === 'function') {
         try {
           this.vditor.destroy();
-        } catch(e) {
-          // 静默失败
-          console.debug('Vditor销毁时产生不影响流程的异常');
+        } catch (e) {
+          // 静默处理
         }
       }
       this.vditor = null;
     },
 
-    initVditor: function() {
+    initVditor: function () {
       const containerId = this.props.forID;
-      
+
       try {
-        // 初始化 Vditor，配置分屏预览模式
         this.vditor = new Vditor(containerId, {
           height: 500,
-          value: this.props.value || '', // 初始值
+          value: this.props.value || '',
           theme: 'classic',
-          mode: 'sv', // 【核心】启用分屏预览模式，左侧源码，右侧预览[citation:6]
-          preview: {
-            mode: 'editor', // 分屏下，左侧为编辑区，右侧为预览区[citation:10]
-          },
-          cache: {
-            enable: false // 禁用本地缓存，避免与CMS冲突[citation:9]
-          },
+          mode: 'ir', // 恢复为即时渲染模式，稳定可靠
+          cache: { enable: false },
+          // ✅ 关键：启用工具栏并完全保留所有默认功能
           toolbar: [
-            'emoji', 'headings', 'bold', 'italic', 'strike',
-            '|', customLinkToolbar, // 使用自定义的超链接按钮
-            '|', 'list', 'ordered-list', 'check',
-            '|', 'quote', 'code', 'inline-code', 'table',
-            '|', 'undo', 'redo', 'fullscreen',
+            'emoji', 'headings', 'bold', 'italic', 'strike', 'link', 'quote', 'code', 'inline-code', 'upload',
+            '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
+            '|', 'table', '|', 'undo', 'redo',
             '|', {
-              name: 'preview-toggle',
-              tip: '切换预览',
-              icon: '<svg>...</svg>',
-              click: () => { this.vditor.togglePreview(); }
+              name: 'more',
+              toolbar: [
+                'both', 'code-theme', 'content-theme', 'export', 'outline', 'preview', 'devtools',
+                'info', 'help', 'br'
+              ]
             }
           ],
           input: (value) => {
-            // 内容变化时，立即通知Decap CMS更新
+            // 内容变化时，立即同步到Decap CMS
+            // 这是最可靠的同步方式
             this.props.onChange(value);
           },
+          // ✅ 关键：通过 `after` 回调解决原生按钮可能的失焦问题
           after: () => {
-            // 编辑器完全初始化后的回调
-            console.log('✅ Vditor 分屏预览模式已加载');
-            // 可在此进行额外的初始状态设置
+            console.log('✅ Vditor 初始化完成 (IR模式)');
+            // 可以在这里绑定一些额外的事件监听，但非必需
           }
         });
-      } catch(e) {
+
+        // ✅ 关键修复：在初始化后，为原生超链接按钮添加一个兜底的焦点恢复逻辑
+        // 找到工具栏中的链接按钮并包装其点击事件
+        setTimeout(() => {
+          const linkBtn = document.querySelector(`#${containerId} .vditor-toolbar__item[data-type="link"]`);
+          if (linkBtn) {
+            const originalClick = linkBtn.onclick;
+            linkBtn.onclick = (e) => {
+              if (originalClick) originalClick.call(linkBtn, e);
+              // 无论原生逻辑如何，300ms后强制让编辑器获得焦点
+              setTimeout(() => {
+                if (this.vditor && this.vditor.focus) {
+                  this.vditor.focus();
+                }
+              }, 300);
+            };
+          }
+        }, 500); // 稍等确保DOM渲染完成
+
+      } catch (e) {
         console.error('Vditor 初始化失败:', e);
       }
     },
 
-    render: function() {
-      return h('div', { 
+    render: function () {
+      return h('div', {
         id: this.props.forID,
-        style: { 
-          minHeight: '500px',
-          border: '1px solid #e1e1e1',
-          borderRadius: '4px'
+        style: {
+          minHeight: '500px'
         }
       });
     }
@@ -122,16 +114,15 @@
 
     try {
       window.CMS.registerWidget('vditor', VditorControl);
-      window.decapCmsVditorPlugin = { version: '1.2', mode: 'split-view' };
-      console.log('✅ Vditor 插件 (分屏预览模式) 已成功注册到 Decap CMS');
-    } catch(e) {
+      window.decapCmsVditorPlugin = { version: '1.3-fixed', mode: 'ir' };
+      console.log('✅ Vditor 插件 (修复版) 已成功注册到 Decap CMS');
+    } catch (e) {
       console.error('注册 Vditor 插件失败:', e);
     }
   }
 
   // 启动
   function init() {
-    // 确保 Decap CMS 环境就绪
     if (!window.createClass || !window.h) {
       setTimeout(init, 100);
       return;
@@ -139,9 +130,17 @@
     registerPlugin();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
+  // 确保 Vditor 库已加载
+  if (typeof Vditor !== 'undefined') {
     init();
+  } else {
+    const checkVditor = () => {
+      if (typeof Vditor !== 'undefined') {
+        init();
+      } else {
+        setTimeout(checkVditor, 100);
+      }
+    };
+    checkVditor();
   }
 })();
