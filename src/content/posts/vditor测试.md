@@ -27,22 +27,22 @@ ssss
 `fdsfds f`
 
 
-| col1 | col2   | col3  |
-| ---- | ------ | ----- |
-|      | 313131 |       |
-|      |        | 12123 |
+| col1              | col2               | col3 |
+| ----------------- | ------------------ | ---- |
+|                   | 313[](https://)131 |      |
+|                   | ~~[](https://)~~   |      |
+| 1[](https://)2123 |                    |      |
 
 ::github{repo="saicaca/fuwari"}
 
 :::note
 
 * Highlights information that users should take into account, even when skimming.[](https://)
-  :::
+  :::[](https://)
 * [](https://)
 
-[](https://)
+[](https://)[](https://)
 
 [](https://)
-
 
 ---
