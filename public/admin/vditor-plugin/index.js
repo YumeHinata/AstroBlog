@@ -1,98 +1,75 @@
-(function () {
+(function() {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
 
   const VditorControl = createClass({
-    componentDidMount: function () {
-      this.vditor = new Vditor(this.props.forID, {
-        height: 500,
-        value: this.props.value || '',
-        mode: 'ir',
-        cache: { enable: false },
-        toolbar: [
-          'emoji', 'headings', 'bold', 'italic', 'strike', 'link', 'quote', 'code', 'inline-code', 'insert-before', 'insert-after',
-          '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
-          '|', 'upload', 'table', '|', 'undo', 'redo',
-          '|', 'edit-mode', 'content-theme', 'code-theme', 'export', 'outline', 'preview', 'devtools', 'info', 'help', 'br'
-        ],
-        input: (value) => this.props.onChange(value),
-        after: () => console.log('Vditor IR 模式就绪')
-      });
+    getInitialState: function() {
+      // 直接使用Decap CMS提供的唯一ID，无需自己生成
+      return { value: this.props.value || '' };
     },
-
-    componentWillReceiveProps: function (nextProps) {
+    componentDidMount: function() {
+      this.initVditor();
+    },
+    componentWillReceiveProps: function(nextProps) {
       if (this.vditor && nextProps.value !== this.props.value) {
         this.vditor.setValue(nextProps.value || '');
       }
     },
-
-    componentWillUnmount: function () {
+    componentWillUnmount: function() {
       this.vditor?.destroy?.();
     },
-
-    render: function () {
-      return h('div', { id: this.props.forID });
+    initVditor: function() {
+      try {
+        this.vditor = new Vditor(this.props.forID, {
+          height: 500,
+          value: this.state.value,
+          mode: 'ir',
+          cache: { enable: false },
+          toolbar: [ // 完整工具栏
+            'emoji', 'headings', 'bold', 'italic', 'strike', 'link', 'quote', 'code', 'inline-code',
+            'insert-before', 'insert-after', '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
+            '|', 'upload', 'table', '|', 'undo', 'redo', '|', 'edit-mode', 'content-theme', 'code-theme',
+            'export', 'outline', 'preview', 'devtools', 'info', 'help', 'br'
+          ],
+          input: (value) => this.props.onChange(value)
+        });
+      } catch(e) {
+        console.error('Vditor初始化失败:', e);
+      }
+    },
+    render: function() {
+      return h('div', { id: this.props.forID, style: { minHeight: '500px' } });
     }
   });
 
-  // 极简预览组件
+  // 修正后的预览组件：安全渲染，避免HTML解析错误
   const VditorPreview = createClass({
-    render: function () {
+    render: function() {
       const value = this.props.value || '';
-
+      // 安全渲染：将内容放在纯文本节点中，并添加基础样式容器
       return h('div', {
-        // 基础容器样式，确保在CMS预览窗格内正常显示
+        className: 'vditor-preview',
         style: {
           padding: '1rem',
           minHeight: '200px',
           fontSize: '14px',
           lineHeight: '1.6',
+          whiteSpace: 'pre-wrap' // 保留换行和空格
         }
-      }, [
-        // 仅在有内容时渲染转换后的HTML
-        value ? this._renderMarkdown(value) : '(无内容)'
-      ]);
-    },
-
-    // 基础Markdown文本转换
-    _renderMarkdown: function (text) {
-      // 这是一个非常基础的转换，用于确保预览的可用性
-      // 如需更完善的效果，可考虑引入轻量级Markdown解析器
-      let html = text
-        // 处理标题
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        // 处理粗体、斜体、删除线
-        .replace(/\*\*\*(.*?)\*\*\*/g, '<strong><em>$1</em></strong>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/~~(.*?)~~/g, '<del>$1</del>')
-        // 处理代码块和内联代码
-        .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-        // 处理图片和链接
-        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" style="max-width:100%;" />')
-        .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
-        // 处理换行：将两个换行符视为段落分隔
-        .replace(/\n\n+/g, '</p><p>')
-        .replace(/\n/g, '<br>');
-
-      // 包装在段落中，并安全地设置HTML
-      return {
-        __html: `<p>${html}</p>`
-      };
+      }, value || '(无内容)');
     }
   });
 
-  // 插件注册
-  function init() {
+  // 精简的插件注册逻辑
+  function registerPlugin() {
     if (window.CMS?.registerWidget && typeof Vditor !== 'undefined') {
       window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
       window.decapCmsVditorPlugin = true;
+      console.log('✅ Vditor插件已注册');
     } else {
-      setTimeout(init, 100);
+      setTimeout(registerPlugin, 100);
     }
   }
-  init();
+  // 启动
+  registerPlugin();
 })();
