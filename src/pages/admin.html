@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex" />
   <link rel="stylesheet" href="/admin/vditor/index.css" />
-  <link rel="stylesheet" href="/admin/vditor-plugin/style.css" />
+  <!-- <link rel="stylesheet" href="/admin/vditor-plugin/style.css" /> -->
   <link href="https://raw.githubusercontent.com/YumeHinata/AstroBlog/refs/heads/main/public/admin/config.yml"
     type="text/yaml" rel="cms-config-url" />
   <title>内容管理器</title>
@@ -17,19 +17,7 @@
   <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
   <script src="/admin/vditor-plugin/uploader.js"></script>
   <script src="/admin/vditor-plugin/index.js"></script>
-  <script src="/admin/vditor-plugin/debug.js"></script>
-  <script>
-    // 简化的加载检查
-    window.addEventListener('load', () => {
-      setTimeout(() => {
-        console.log('📋 加载状态检查:');
-        console.log('- Vditor:', typeof Vditor);
-        console.log('- CMS:', typeof CMS);
-        console.log('- 上传模块:', window.vditorUploader ? '就绪' : '未加载');
-        console.log('- 插件:', window.decapCmsVditorPlugin ? '已注册' : '未注册');
-      }, 2000);
-    });
-  </script>
+  <!-- <script src="/admin/vditor-plugin/debug.js"></script> -->
 </body>
 
 </html>

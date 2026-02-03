@@ -2,353 +2,332 @@
   'use strict';
 
   if (window.decapCmsVditorPlugin) return;
-  console.log('🔄 Vditor 插件初始化...');
-
+  
   const CONFIG = {
     widgetName: 'vditor',
-    debug: true  // 调试模式开启，便于排查
+    uploadHandler: window.vditorUploader?.handleUpload
   };
 
-  // 创建编辑器控件 - 修复数据同步问题
-  function createControl() {
-    if (!window.createClass || !window.h) {
-      console.error('缺少 React 依赖');
-      return null;
-    }
-
+  // 创建 Vditor 编辑器控件（修复工具栏问题）
+  function createVditorControl() {
     return createClass({
-      getInitialState() {
-        const initialValue = this.props.value || '';
-        this._id = `vditor-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-        
-        CONFIG.debug && console.log(`创建控件 ${this._id}，初始值长度:`, initialValue.length);
-        
-        return { 
-          value: initialValue, 
-          ready: false,
-          syncCounter: 0
+      getInitialState: function() {
+        this._editorId = 'vditor-' + Date.now();
+        this._editorRef = null; // 用于保存 Vditor 实例引用
+        return {
+          value: this.props.value || '',
+          initialized: false,
+          isFocused: false
         };
       },
 
-      componentDidMount() {
-        CONFIG.debug && console.log(`组件挂载: ${this._id}`);
-        setTimeout(() => this.initEditor(), 100);
+      componentDidMount: function() {
+        // 确保 DOM 渲染完成
+        requestAnimationFrame(() => {
+          this._initVditor();
+        });
       },
 
-      componentDidUpdate(prevProps, prevState) {
-        // 1. 当外部props变化时（例如从CMS加载已有内容），同步到编辑器
-        if (prevProps.value !== this.props.value) {
-          CONFIG.debug && console.log(`外部值变化: ${this._id}`, {
-            旧长度: prevProps.value ? prevProps.value.length : 0,
-            新长度: this.props.value ? this.props.value.length : 0
-          });
-          
-          this.setState({ value: this.props.value || '' }, () => {
-            // 更新Vditor实例的内容
-            if (this._instance && this._instance.setValue) {
-              this._instance.setValue(this.state.value);
-            }
-          });
-        }
-      },
-
-      componentWillUnmount() {
-        CONFIG.debug && console.log(`组件卸载: ${this._id}`);
-        if (this._instance && this._instance.destroy) {
-          try {
-            this._instance.destroy();
-          } catch (e) {
-            console.warn('销毁Vditor时出错:', e);
+      componentDidUpdate: function(prevProps) {
+        // 外部值变化时更新编辑器
+        if (prevProps.value !== this.props.value && this._editorRef) {
+          const newValue = this.props.value || '';
+          const currentValue = this._editorRef.getValue();
+          if (newValue !== currentValue) {
+            this._editorRef.setValue(newValue);
+            this.setState({ value: newValue });
           }
         }
       },
 
-      initEditor() {
-        const container = document.getElementById(this._id);
+      componentWillUnmount: function() {
+        if (this._editorRef && this._editorRef.destroy) {
+          this._editorRef.destroy();
+        }
+      },
+
+      _initVditor: function() {
+        const container = document.getElementById(this._editorId);
         if (!container) {
-          CONFIG.debug && console.warn(`找不到容器 ${this._id}，重试...`);
-          setTimeout(() => this.initEditor(), 200);
+          // 重试机制
+          setTimeout(() => this._initVditor(), 100);
           return;
         }
 
         try {
-          CONFIG.debug && console.log(`初始化Vditor: ${this._id}，内容长度:`, this.state.value.length);
+          // 清除可能存在的旧内容
+          container.innerHTML = '';
           
-          this._instance = new Vditor(this._id, {
+          // 正确的工具栏配置
+          const toolbarConfig = [
+            'emoji',
+            'headings',
+            'bold',
+            'italic',
+            'strike',
+            'link', // 链接按钮
+            '|',
+            'list',
+            'ordered-list',
+            'check',
+            'outdent',
+            'indent',
+            '|',
+            'quote',
+            'code',
+            'inline-code',
+            'table',
+            '|',
+            'undo',
+            'redo',
+            '|',
+            {
+              name: 'more',
+              toolbar: [
+                'both',
+                'code-theme',
+                'content-theme',
+                'preview',
+                'fullscreen',
+                'outline',
+                'devtools'
+              ]
+            }
+          ];
+
+          // 初始化 Vditor
+          this._editorRef = new Vditor(this._editorId, {
+            mode: 'sv', // 使用 splitview 模式确保工具栏正常工作
             height: 500,
-            placeholder: '开始编辑...',
+            placeholder: '开始编辑内容...',
             value: this.state.value,
             theme: 'classic',
             icon: 'ant',
-            toolbar: [
-              'emoji', 'headings', 'bold', 'italic', 'strike', 'link',
-              '|', 'list', 'ordered-list', 'check',
-              '|', 'quote', 'code', 'inline-code', 'table',
-              '|', 'undo', 'redo', 'preview', 'fullscreen'
-            ],
-            upload: {
+            typewriterMode: true,
+            toolbar: toolbarConfig,
+            upload: CONFIG.uploadHandler ? {
               accept: 'image/*',
               multiple: true,
-              // 使用独立的上传模块
-              handler: window.vditorUploader ? 
-                window.vditorUploader.handleUpload.bind(window.vditorUploader) : 
-                function(files) {
-                  console.log('默认上传处理器，请安装上传模块');
-                  return Promise.resolve([]);
-                }
-            },
-            
-            // 关键修复：使用防抖的输入处理，确保实时同步
+              handler: CONFIG.uploadHandler
+            } : undefined,
             input: (value) => {
-              // 防抖处理，避免频繁更新
-              if (this._inputTimer) clearTimeout(this._inputTimer);
-              
-              this._inputTimer = setTimeout(() => {
-                CONFIG.debug && console.log(`Vditor输入同步: ${this._id}，长度: ${value.length}`);
-                
-                // 更新组件状态
-                this.setState({ 
-                  value: value,
-                  syncCounter: this.state.syncCounter + 1
-                });
-                
-                // 关键：必须调用onChange通知Decap CMS数据已更新
-                if (this.props.onChange) {
-                  CONFIG.debug && console.log(`调用onChange回调，长度: ${value.length}`);
-                  this.props.onChange(value);
-                } else {
-                  console.error('onChange回调不存在！');
-                }
-              }, 300); // 300ms防抖
+              this.setState({ value: value });
+              if (this.props.onChange) {
+                this.props.onChange(value);
+              }
             },
-            
-            // 额外的回调，确保各种操作都能同步
+            focus: () => {
+              this.setState({ isFocused: true });
+            },
             blur: () => {
-              const value = this._instance.getValue();
-              CONFIG.debug && console.log(`编辑器失去焦点，同步内容，长度: ${value.length}`);
-              this.syncValueToCMS(value);
+              this.setState({ isFocused: false });
             },
-            
-            // 工具栏操作后的回调
             after: () => {
-              // 确保初始化后内容同步
+              this.setState({ initialized: true });
+              
+              // 确保工具栏事件绑定完成
               setTimeout(() => {
-                const value = this._instance.getValue();
-                if (value !== this.state.value) {
-                  this.syncValueToCMS(value);
-                }
-              }, 100);
+                this._setupToolbarDebug();
+              }, 500);
+            },
+            cache: { enable: false },
+            preview: {
+              hljs: {
+                style: 'github'
+              }
             }
           });
 
-          this.setState({ ready: true });
-          CONFIG.debug && console.log(`✅ Vditor初始化完成: ${this._id}`);
-          
-          // 初始化后立即同步一次
-          setTimeout(() => {
-            const value = this._instance.getValue();
-            if (value !== this.state.value) {
-              this.syncValueToCMS(value);
-            }
-          }, 500);
-          
-        } catch (e) {
-          console.error(`Vditor初始化失败 (${this._id}):`, e);
+        } catch (error) {
+          console.error('Vditor 初始化失败:', error);
           container.innerHTML = `
-            <div style="padding:20px;border:2px dashed #e53e3e;color:#c53030;border-radius:8px;">
-              <strong>Vditor加载失败</strong><br>
-              <small>${e.message}</small><br>
-              <button onclick="location.reload()" style="margin-top:10px;padding:5px 10px;background:#e53e3e;color:white;border:none;border-radius:4px;cursor:pointer;">
-                刷新重试
-              </button>
+            <div style="
+              padding: 20px;
+              border: 2px dashed #e53e3e;
+              border-radius: 8px;
+              color: #c53030;
+              background: #fed7d7;
+            ">
+              Vditor 加载失败: ${error.message}
             </div>
           `;
         }
       },
 
-      // 同步值到CMS的专用方法
-      syncValueToCMS(value) {
-        CONFIG.debug && console.log(`主动同步到CMS: ${this._id}，长度: ${value.length}`);
-        
-        this.setState({ value: value });
-        
-        if (this.props.onChange) {
-          this.props.onChange(value);
-        } else {
-          console.error('无法同步：onChange回调不存在');
+      // 工具栏调试辅助（可选）
+      _setupToolbarDebug: function() {
+        // 可选：为调试添加事件监听
+        if (typeof window !== 'undefined' && window.location.search.includes('debug')) {
+          const toolbar = document.querySelector('.vditor-toolbar');
+          if (toolbar) {
+            toolbar.addEventListener('click', (e) => {
+              const target = e.target.closest('[data-type]');
+              if (target) {
+                console.log('工具栏按钮点击:', target.dataset.type);
+              }
+            });
+          }
         }
       },
 
-      // 添加一个隐藏的textarea，供Decap CMS表单提交使用（兼容性方案）
-      render() {
+      // 手动测试链接功能的方法
+      _testLinkFunction: function() {
+        if (this._editorRef) {
+          // 手动插入测试链接
+          const cursorPosition = this._editorRef.getCursorPosition();
+          const testLink = '[Vditor 官网](https://b3log.org/vditor)';
+          this._editorRef.insertValue(testLink);
+          console.log('测试链接已插入');
+        }
+      },
+
+      render: function() {
         const fieldName = this.props.field ? this.props.field.get('name') : 'content';
         
-        CONFIG.debug && console.log(`渲染控件 ${this._id}，字段: ${fieldName}，值长度: ${this.state.value.length}`);
-        
-        return h('div', { className: 'vditor-container' }, [
-          // 关键：隐藏的textarea，确保Decap CMS表单提交能捕获到值
+        return h('div', { 
+          className: 'vditor-container',
+          style: { 
+            position: 'relative',
+            width: '100%'
+          }
+        }, [
+          // 隐藏的表单字段
           h('textarea', {
-            key: 'hidden-field',
-            name: fieldName,  // 必须与字段名匹配
+            name: fieldName,
             value: this.state.value,
             readOnly: true,
-            style: {
-              display: 'none',
+            style: { 
               position: 'absolute',
-              left: '-9999px'
-            },
-            'data-decap-cms-field': fieldName  // 额外的标识
+              left: '-9999px',
+              width: '1px',
+              height: '1px',
+              opacity: '0',
+              pointerEvents: 'none'
+            }
           }),
           
-          // Vditor编辑器容器
+          // 编辑器容器
           h('div', { 
-            id: this._id,
+            id: this._editorId,
+            key: 'editor',
             style: { 
               minHeight: '500px',
-              border: '1px solid #d1d5db',
+              width: '100%',
+              border: this.state.isFocused ? '2px solid #4299e1' : '1px solid #cbd5e0',
               borderRadius: '8px',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              transition: 'border-color 0.2s'
             }
           }),
           
-          // 状态指示器
-          !this.state.ready && h('div', { 
-            style: { 
-              padding: '10px', 
-              textAlign: 'center', 
-              color: '#6b7280',
-              fontSize: '14px',
-              backgroundColor: '#f9fafb',
-              borderRadius: '6px',
-              marginTop: '10px'
-            } 
-          }, '编辑器加载中...'),
-          
-          // 调试信息（仅调试模式显示）
-          CONFIG.debug && h('div', {
+          // 状态指示器（可选）
+          !this.state.initialized && h('div', {
             style: {
-              fontSize: '12px',
-              color: '#6b7280',
-              marginTop: '5px',
-              padding: '5px',
-              backgroundColor: '#f3f4f6',
+              position: 'absolute',
+              top: '10px',
+              right: '10px',
+              padding: '4px 8px',
+              background: '#edf2f7',
+              color: '#4a5568',
               borderRadius: '4px',
-              border: '1px dashed #d1d5db'
+              fontSize: '12px',
+              zIndex: '10'
             }
-          }, `同步次数: ${this.state.syncCounter} | 长度: ${this.state.value.length}`)
+          }, '加载中...')
         ]);
       }
     });
   }
 
-  // 创建预览组件（确保预览也能显示内容）
-  function createPreview() {
-    if (!window.createClass || !window.h) return null;
-    
+  // 创建预览组件
+  function createVditorPreview() {
     return createClass({
-      render() {
+      render: function() {
         const value = this.props.value || '';
-        const preview = value.length > 300 ? value.substring(0, 300) + '...' : value;
+        const previewText = value.length > 250 ? value.substring(0, 250) + '...' : value;
         
         return h('div', {
           style: {
             padding: '15px',
-            border: '1px solid #e5e7eb',
+            border: '1px solid #e2e8f0',
             borderRadius: '8px',
-            background: '#f9fafb',
+            background: '#f7fafc',
             fontSize: '14px',
             lineHeight: '1.6',
-            maxHeight: '200px',
-            overflowY: 'auto'
+            maxHeight: '300px',
+            overflowY: 'auto',
+            wordBreak: 'break-word'
           }
         }, [
           h('div', {
             style: {
               fontSize: '12px',
-              color: '#6b7280',
+              color: '#718096',
               marginBottom: '10px',
-              fontWeight: 'bold'
+              fontWeight: '500'
             }
           }, '预览'),
-          h('div', {}, preview || '(空内容)')
+          h('div', {}, previewText || '(空内容)')
         ]);
       }
     });
   }
 
-  // 注册插件
+  // 插件注册
   function registerPlugin() {
-    if (!window.CMS || !window.CMS.registerWidget) {
-      console.log('等待CMS加载...');
-      setTimeout(registerPlugin, 100);
-      return;
-    }
-
-    if (typeof Vditor === 'undefined') {
-      console.log('等待Vditor库加载...');
+    if (!window.CMS || !window.CMS.registerWidget || typeof Vditor === 'undefined') {
       setTimeout(registerPlugin, 100);
       return;
     }
 
     try {
-      const Control = createControl();
-      const Preview = createPreview();
+      const Control = createVditorControl();
+      const Preview = createVditorPreview();
       
-      if (!Control) {
-        throw new Error('无法创建控件');
-      }
+      if (!Control) throw new Error('无法创建控件');
 
-      // 注册控件（同时注册预览组件）
+      // 注册控件
       window.CMS.registerWidget(CONFIG.widgetName, Control, Preview);
       
       window.decapCmsVditorPlugin = { 
         widget: CONFIG.widgetName, 
-        version: '1.2',
-        debug: CONFIG.debug
+        version: '1.1.0'
       };
       
-      console.log(`✅ ${CONFIG.widgetName} 插件注册成功`);
+      // 添加测试方法（仅开发环境）
+      if (typeof window !== 'undefined' && window.location.search.includes('debug')) {
+        window.testVditorLink = function() {
+          const containers = document.querySelectorAll('.vditor-container');
+          containers.forEach(container => {
+            const control = container.__reactInternalInstance;
+            if (control && control._testLinkFunction) {
+              control._testLinkFunction();
+            }
+          });
+        };
+      }
       
-      // 添加全局调试接口
-      window.__vditorDebug = {
-        getWidgetInfo: () => {
-          const widget = window.CMS.getWidget(CONFIG.widgetName);
-          return {
-            registered: !!widget,
-            controlType: widget ? typeof widget.control : '未找到',
-            previewType: widget ? typeof widget.preview : '未找到'
-          };
-        },
-        testOnChange: (fieldName = 'body') => {
-          // 模拟CMS的onChange调用
-          const mockProps = {
-            field: { get: (key) => key === 'name' ? fieldName : null },
-            onChange: (value) => console.log(`onChange被调用，值长度: ${value.length}`)
-          };
-          console.log('测试onChange回调:', mockProps.onChange);
-        }
-      };
-      
-    } catch (e) {
-      console.error('插件注册失败:', e);
+    } catch (error) {
+      console.error('Vditor 插件注册失败:', error);
     }
   }
 
-  // 启动
+  // 初始化
   function init() {
     if (typeof Vditor === 'undefined') {
+      console.log('等待 Vditor 加载...');
       setTimeout(init, 500);
       return;
     }
     
-    console.log('🚀 启动Vditor插件...');
+    console.log('🚀 初始化 Vditor 插件...');
     registerPlugin();
   }
 
-  // 页面加载后初始化
+  // 启动插件
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
   } else {
-    setTimeout(init, 1000);
+    setTimeout(init, 800);
   }
 })();
