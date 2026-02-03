@@ -1,100 +1,146 @@
-(function() {
+(function () {
   'use strict';
-  
+
   if (window.decapCmsVditorWidget) return;
-  
-  // 纯 ES6 类，不依赖 React
+
   class VditorControl {
     constructor({ value, field, onChange, classNameWrapper }) {
       this.value = value || '';
       this.onChange = onChange;
-      this.id = `vditor-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      this.vditor = null;
-      
-      // 创建隐藏的 input
-      this.hiddenInput = document.createElement('input');
-      this.hiddenInput.type = 'hidden';
-      this.hiddenInput.name = field.get('name');
-      this.hiddenInput.value = this.value;
-      
-      // 创建容器
-      this.container = document.createElement('div');
-      this.container.className = classNameWrapper;
-      
-      // Vditor 容器
-      this.editorContainer = document.createElement('div');
-      this.editorContainer.id = this.id;
-      
-      this.container.appendChild(this.hiddenInput);
-      this.container.appendChild(this.editorContainer);
+      this.id = 'vditor-' + Date.now();
+      this.fieldName = field.get('name');
+
+      // 创建唯一的 wrapper
+      this.wrapper = document.createElement('div');
+      this.wrapper.className = classNameWrapper;
+      this.wrapper.id = 'wrapper-' + this.id;
+
+      // 创建隐藏的 textarea - 这是 Decap CMS 实际读取的
+      this.hiddenTextarea = document.createElement('textarea');
+      this.hiddenTextarea.name = this.fieldName;
+      this.hiddenTextarea.value = this.value;
+      this.hiddenTextarea.style.display = 'none';
+      this.hiddenTextarea.id = 'hidden-' + this.id;
+
+      // 创建 Vditor 容器
+      this.editorDiv = document.createElement('div');
+      this.editorDiv.id = this.id;
+
+      // 组装
+      this.wrapper.appendChild(this.hiddenTextarea);
+      this.wrapper.appendChild(this.editorDiv);
+
+      // 关键：立即初始化 Vditor，不要延迟
+      this.initVditorImmediately();
     }
-    
-    // Decap CMS 需要的方法
+
+    initVditorImmediately() {
+      // 检查 Vditor 是否可用
+      if (typeof Vditor === 'undefined') {
+        console.error('Vditor not loaded');
+        return;
+      }
+
+      console.log('Initializing Vditor for field:', this.fieldName);
+
+      // 最简配置，避免任何可能冲突的功能
+      this.vditor = new Vditor(this.id, {
+        height: 500,
+        value: this.value,
+        mode: 'wysiwyg', // 使用 WYSIWYG 模式可能更稳定
+        cache: {
+          enable: false
+        },
+        toolbar: [], // 空工具栏，避免按钮事件冲突
+        input: (value) => {
+          // 直接同步，不要任何延迟
+          this.value = value;
+          this.hiddenTextarea.value = value;
+
+          // 关键：直接调用 onChange，不经过任何包装
+          if (this.onChange && typeof this.onChange === 'function') {
+            try {
+              this.onChange(value);
+            } catch (e) {
+              console.error('onChange error:', e);
+            }
+          }
+        }
+      });
+
+      // 关键：手动处理所有工具栏事件
+      this.setupToolbarHandlers();
+    }
+
+    setupToolbarHandlers() {
+      if (!this.vditor || !this.vditor.vditor) return;
+
+      // 获取 Vditor 内部元素
+      const editorElement = document.getElementById(this.id);
+      if (!editorElement) return;
+
+      // 监听编辑器区域的所有点击事件
+      editorElement.addEventListener('click', (e) => {
+        // 阻止所有点击事件冒泡到 React 层
+        e.stopPropagation();
+        e.preventDefault();
+
+        // 确保编辑器获得焦点
+        setTimeout(() => {
+          if (this.vditor) {
+            this.vditor.focus();
+          }
+        }, 10);
+      }, true); // 使用捕获阶段，确保最先处理
+
+      // 也阻止 mousedown 事件
+      editorElement.addEventListener('mousedown', (e) => {
+        e.stopPropagation();
+      }, true);
+
+      // 阻止 focus 事件
+      editorElement.addEventListener('focus', (e) => {
+        e.stopPropagation();
+      }, true);
+    }
+
+    // Decap CMS 必要的方法
     getValue() {
-      return this.value;
+      return this.hiddenTextarea.value;
     }
-    
-    // Decap CMS 需要的方法
+
     setValue(value) {
       this.value = value || '';
-      this.hiddenInput.value = this.value;
-      if (this.vditor) {
+      this.hiddenTextarea.value = this.value;
+      if (this.vditor && this.vditor.getValue() !== this.value) {
         this.vditor.setValue(this.value);
       }
       return this;
     }
-    
-    // Decap CMS 需要的方法
+
     getWidget() {
-      return this.container;
+      return this.wrapper;
     }
-    
-    // Decap CMS 需要的方法
+
     isValid() {
       return true;
     }
-    
-    // 初始化 Vditor
-    init() {
-      if (this.vditor || !document.getElementById(this.id)) return;
-      
-      // Vditor 官方最简配置
-      this.vditor = new Vditor(this.id, {
-        height: 500,
-        value: this.value,
-        cache: {
-          enable: false  // 禁用缓存避免冲突
-        },
-        input: (value) => {
-          this.value = value;
-          this.hiddenInput.value = value;
-          if (this.onChange) {
-            this.onChange(value);
-          }
-        }
-      });
-    }
   }
-  
-  // 注册函数
-  function register() {
-    if (!window.CMS || !window.CMS.registerWidget) {
-      setTimeout(register, 100);
-      return;
+
+  // 简化的注册逻辑
+  window.decapCmsVditorWidget = true;
+
+  // 使用事件监听确保在正确时机注册
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.CMS && window.CMS.registerWidget) {
+      window.CMS.registerWidget('vditor', VditorControl);
+      console.log('Vditor widget registered (DOM ready)');
     }
-    
-    // 检查 Vditor
-    if (typeof Vditor === 'undefined') {
-      console.warn('Vditor not loaded, retrying...');
-      setTimeout(register, 100);
-      return;
-    }
-    
+  });
+
+  // 也尝试立即注册
+  if (window.CMS && window.CMS.registerWidget) {
     window.CMS.registerWidget('vditor', VditorControl);
-    window.decapCmsVditorWidget = true;
-    console.log('Vditor widget registered');
+    console.log('Vditor widget registered (immediate)');
   }
-  
-  // 立即尝试注册
-  register();
 })();
