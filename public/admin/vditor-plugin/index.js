@@ -38,6 +38,7 @@
             multiple: true, // 允许选择多张图片
             // 自定义上传处理器 (核心)
             handler: (files) => {
+              console.log('📤 上传处理器被调用，收到文件:', files);
               // 返回一个 Promise，Vditor 会等待其完成
               return new Promise((resolve) => {
                 const successFiles = [];
@@ -45,12 +46,15 @@
                 let processed = 0;
 
                 Array.from(files).forEach((file) => {
+                  console.log(`正在处理文件: ${file.name} (${file.size} bytes)`);
                   const reader = new FileReader();
 
                   reader.onload = (e) => {
                     processed++;
                     // 构建 Base64 字符串
                     const base64Str = e.target.result;
+                    console.log(`✅ 文件 ${file.name} 读取完成，Base64 长度:`, base64Str.length);
+
                     // 生成一个简单的文件名（可选）
                     const altName = file.name.replace(/\.[^/.]+$/, ""); // 去掉扩展名
                     // 格式化为 Vditor 需要的成功返回项
@@ -76,6 +80,8 @@
                           }, {})
                         }
                       });
+                      console.log('🎯 准备返回结果给 Vditor:', result);
+                      resolve(result); // 确保这里被执行
                     }
                   };
 
@@ -102,7 +108,7 @@
               });
             },
             // 设置一个合理的文件大小限制，避免文档过大 (Base64会膨胀约33%)
-            max: 20 * 10240 * 10240, // 示例：限制为 2MB
+            max: 20 * 1024 * 1024, // 示例：限制为 2MB
           },
         });
       } catch (e) {
