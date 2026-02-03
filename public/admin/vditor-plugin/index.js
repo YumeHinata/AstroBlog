@@ -3,7 +3,15 @@
 
   if (window.decapCmsVditorPlugin) return;
   
-  // 创建 Vditor 控件 - 完全按照官方模式
+  // 工具函数：File -> Base64
+  const fileToBase64 = (file) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+  });
+
+  // 创建 Vditor 控件
   const VditorControl = createClass({
     getInitialState: function() {
       this.id = 'vditor-' + Date.now();
@@ -20,6 +28,26 @@
         input: (value) => {
           this.setState({ value: value });
           this.props.onChange && this.props.onChange(value);
+        },
+        upload: {
+          accept: 'image/*',
+          multiple: true,
+          handler: async (files) => {
+            const succMap = {};
+            const errFiles = [];
+            for (const file of files) {
+              try {
+                succMap[file.name] = await fileToBase64(file);
+              } catch (error) {
+                errFiles.push(file.name);
+              }
+            }
+            return {
+              msg: '',
+              code: 0,
+              data: { errFiles, succMap }
+            };
+          }
         }
       });
     },
@@ -46,7 +74,6 @@
       setTimeout(register, 100);
       return;
     }
-
     window.CMS.registerWidget('vditor', VditorControl);
     window.decapCmsVditorPlugin = true;
   }
