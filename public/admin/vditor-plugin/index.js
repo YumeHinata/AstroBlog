@@ -35,81 +35,62 @@
           // 图片上传配置 - Base64 方案
           upload: {
             accept: 'image/*',
-            multiple: true, // 允许选择多张图片
-            // 自定义上传处理器 (核心)
+            multiple: true,
+            // 设置一个合理的文件大小限制，避免文档过大 (Base64会膨胀约33%)
+            max: 20 * 1024 * 1024, // 修正为 5MB
+
             handler: (files) => {
               console.log('📤 上传处理器被调用，收到文件:', files);
-              // 返回一个 Promise，Vditor 会等待其完成
-              return new Promise((resolve) => {
-                const successFiles = [];
-                const total = files.length;
-                let processed = 0;
 
-                Array.from(files).forEach((file) => {
+              // 使用 Promise.all 并行处理所有文件，结构更清晰
+              const filePromises = Array.from(files).map(file => {
+                return new Promise((resolveFile) => {
                   console.log(`正在处理文件: ${file.name} (${file.size} bytes)`);
                   const reader = new FileReader();
 
                   reader.onload = (e) => {
-                    processed++;
-                    // 构建 Base64 字符串
                     const base64Str = e.target.result;
-                    console.log(`✅ 文件 ${file.name} 读取完成，Base64 长度:`, base64Str.length);
-
-                    // 生成一个简单的文件名（可选）
-                    const altName = file.name.replace(/\.[^/.]+$/, ""); // 去掉扩展名
-                    // 格式化为 Vditor 需要的成功返回项
-                    successFiles.push({
-                      file,
-                      // 重点：将 Base64 字符串作为 URL 返回，并嵌入 Markdown 图片语法
-                      url: `data:${file.type};base64,${base64Str.split(',')[1]}`,
-                      // 用于在编辑器中显示的文本，这里用 ![alt](url) 格式
-                      alt: altName
+                    console.log(`✅ 文件 ${file.name} 读取完成`);
+                    // 成功：返回文件名和构建好的Markdown图片字符串
+                    resolveFile({
+                      name: file.name,
+                      markdown: `![${file.name.replace(/\.[^/.]+$/, "")}](${base64Str})`
                     });
-
-                    // 当所有文件处理完成时，解析 Promise
-                    if (processed === total) {
-                      // Vditor 需要特定的返回格式
-                      resolve({
-                        code: 0, // 0 表示成功
-                        msg: '',
-                        data: {
-                          // succMap 是成功文件的映射，键为原始文件名，值为最终的 Markdown 字符串
-                          succMap: successFiles.reduce((map, item) => {
-                            map[item.file.name] = `![${item.alt}](${item.url})`;
-                            return map;
-                          }, {})
-                        }
-                      });
-                      console.log('🎯 准备返回结果给 Vditor:', result);
-                      resolve(result); // 确保这里被执行
-                    }
                   };
 
                   reader.onerror = () => {
-                    processed++;
                     console.error(`文件读取失败: ${file.name}`);
-                    // 即使有失败，也继续处理其他文件，但不在 succMap 中包含它
-                    if (processed === total) {
-                      resolve({
-                        code: 0,
-                        msg: '部分文件处理失败',
-                        data: {
-                          succMap: successFiles.reduce((map, item) => {
-                            map[item.file.name] = `![${item.alt}](${item.url})`;
-                            return map;
-                          }, {})
-                        }
-                      });
-                    }
+                    // 失败：返回 null，后续过滤掉
+                    resolveFile(null);
                   };
-                  // 开始读取文件为 Data URL (默认就是 Base64)
+
                   reader.readAsDataURL(file);
                 });
               });
-            },
-            // 设置一个合理的文件大小限制，避免文档过大 (Base64会膨胀约33%)
-            max: 20 * 1024 * 1024, // 示例：限制为 2MB
-          },
+
+              // 等待所有文件处理完毕
+              return Promise.all(filePromises).then(fileResults => {
+                // 过滤掉失败（null）的结果
+                const successFiles = fileResults.filter(item => item !== null);
+                console.log(`处理完成，成功 ${successFiles.length} 个，失败 ${fileResults.length - successFiles.length} 个`);
+
+                // 构建 Vditor 要求的返回格式
+                const succMap = {};
+                successFiles.forEach(item => {
+                  succMap[item.name] = item.markdown;
+                });
+
+                const finalResult = {
+                  code: 0,
+                  msg: successFiles.length === files.length ? '' : '部分文件处理失败',
+                  data: { succMap }
+                };
+
+                console.log('🎯 返回给Vditor的最终结果:', finalResult);
+                return finalResult;
+              });
+            }
+          }
         });
       } catch (e) {
         console.error('Vditor初始化失败:', e);
