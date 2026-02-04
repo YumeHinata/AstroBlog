@@ -30,29 +30,20 @@
       }
     },
     
-    calculatePaths(filename) {
-      // 使用文档标题来创建文件夹
-      const entry = window.CMS?.activeEntry;
-      let docTitle = 'untitled';
+    calculatePaths(filename, docTitle) {
+      // 安全清理文档标题作为文件夹名
+      const sanitizeFolderName = (title) => {
+        if (!title || typeof title !== 'string') return 'untitled';
+        
+        return title
+          .toLowerCase()
+          .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')  // 移除非法字符，保留中文、字母、数字、空格、连字符
+          .replace(/\s+/g, '-')                   // 空格替换为连字符
+          .replace(/-+/g, '-')                    // 多个连字符合并为一个
+          .replace(/^-|-$/g, '');                 // 移除开头和结尾的连字符
+      };
       
-      try {
-        if (entry?.data?.title) {
-          docTitle = entry.data.title;
-        } else if (entry?.slug) {
-          docTitle = entry.slug;
-        }
-      } catch (e) {
-        console.warn('无法获取文档标题，使用默认值:', e);
-      }
-      
-      // 清理文件夹名
-      const folderName = docTitle
-        .toLowerCase()
-        .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-      
+      const folderName = sanitizeFolderName(docTitle || 'untitled');
       const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
       const timestamp = Date.now();
       const randomSuffix = Math.floor(Math.random() * 1000);
@@ -82,17 +73,11 @@
     },
     
     cleanupPreviews() {
-      this.pendingImages.forEach(img => {
-        try {
-          URL.revokeObjectURL(img.previewUrl);
-        } catch (e) {
-          // 忽略清理错误
-        }
-      });
+      this.pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
       this.pendingImages = [];
     },
     
-    async uploadAll(vditorInstance) {
+    async uploadAll(vditorInstance, docTitle) {
       if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
       if (this.isUploading) throw new Error('上传正在进行中');
       
@@ -106,23 +91,20 @@
       try {
         for (const img of this.pendingImages) {
           try {
-            const { pathInRepo, markdownPath, folderName } = this.calculatePaths(img.name);
+            const { pathInRepo, markdownPath, folderName } = this.calculatePaths(img.name, docTitle);
             
-            // 确保文件夹存在 - 先尝试获取文件夹信息
-            try {
-              await this.checkFileExists(token, repoOwner, repoName, `${this.config.mediaFolder}/${folderName}/.keep`);
-            } catch (folderError) {
-              console.log(`文件夹 ${folderName} 可能不存在，尝试创建`);
-              // 如果文件夹不存在，GitHub API会在上传文件时自动创建
+            // 检查文件夹是否存在，如果不存在则尝试创建（通过上传一个空文件）
+            const folderPath = `${this.config.mediaFolder}/${folderName}`;
+            const folderExists = await this.checkFileExists(token, repoOwner, repoName, folderPath + '/.gitkeep');
+            
+            if (!folderExists) {
+              console.log(`文件夹 ${folderName} 不存在，尝试创建...`);
+              // GitHub会在上传文件时自动创建不存在的文件夹，所以我们不需要手动创建
             }
             
             const content = await this.fileToBase64(img.file);
+            const sha = null; // 默认不检查文件是否存在，直接上传
             
-            // 检查文件是否已存在
-            const fileExists = await this.checkFileExists(token, repoOwner, repoName, pathInRepo);
-            const sha = fileExists ? fileExists.sha : null;
-            
-            // 上传文件到GitHub
             await this.pushToGitHub(token, repoOwner, repoName, pathInRepo, content, branch, commitCfg, img.name, sha);
             
             results.success++;
@@ -131,17 +113,12 @@
             
             URL.revokeObjectURL(img.previewUrl);
           } catch (error) {
-            console.error(`上传图片 ${img.name} 失败:`, error);
             results.errors.push(`${img.name}: ${error.message}`);
           }
         }
         
         if (results.markdowns.length > 0 && vditorInstance) {
-          try {
-            vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
-          } catch (insertError) {
-            console.error('插入Markdown失败:', insertError);
-          }
+          vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
         }
         
         this.pendingImages = [];
@@ -171,7 +148,7 @@
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = () => reject(new Error('读取文件失败'));
+        reader.onerror = reject;
         reader.readAsDataURL(file);
       });
     },
@@ -182,14 +159,8 @@
         message: `${commitCfg.commitPrefix}${filename}`,
         content,
         branch,
-        committer: { 
-          name: commitCfg.authorName, 
-          email: commitCfg.authorEmail 
-        },
-        author: { 
-          name: commitCfg.authorName, 
-          email: commitCfg.authorEmail 
-        }
+        committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
+        author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
       };
       
       if (sha) body.sha = sha;
@@ -214,8 +185,6 @@
         }
         throw new Error(errorMsg);
       }
-      
-      return await res.json();
     }
   };
 
@@ -230,25 +199,13 @@
     },
     
     componentDidMount() {
-      // 延迟初始化，避免与React渲染冲突
-      setTimeout(() => {
-        this.initVditor();
-      }, 100);
-      
-      this.titleCheckInterval = setInterval(() => {
-        this.checkDocTitle();
-      }, 2000);
+      this.initVditor();
+      this.titleCheckInterval = setInterval(() => this.checkDocTitle(), 2000);
     },
     
     componentWillUnmount() {
       clearInterval(this.titleCheckInterval);
-      if (this.vditor) {
-        try {
-          this.vditor.destroy();
-        } catch (e) {
-          // 忽略清理错误
-        }
-      }
+      if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
     },
     
@@ -264,14 +221,19 @@
     },
     
     checkDocTitle() {
-      const newTitle = this.getDocTitle();
-      if (newTitle !== this.state.docTitle) {
-        this.setState({ docTitle: newTitle });
+      try {
+        const newTitle = this.getDocTitle();
+        if (newTitle !== this.state.docTitle) {
+          this.setState({ docTitle: newTitle });
+        }
+      } catch (e) {
+        console.warn('检查文档标题失败:', e);
       }
     },
     
     initVditor() {
       try {
+        // 确保元素存在
         const element = document.getElementById(this.props.forID);
         if (!element) {
           console.error('找不到元素:', this.props.forID);
@@ -305,12 +267,11 @@
         '|', 'table', '|', 'undo', 'redo', '|'
       ];
       
-      // 使用安全的Iconify图标
       const uploadButton = {
         name: 'image-upload',
         tip: '上传图片到GitHub',
         className: 'toolbar__image-upload',
-        icon: '<span style="display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;"><svg viewBox="0 0 24 24" width="16" height="16" style="fill:currentColor;"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/><path d="M16.5 6.5c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zM19 19H5v-2.3l3.3-3.3 2.5 2.5 4.8-4.8 3.4 3.4V19z"/></svg></span>',
+        icon: '<iconify-icon icon="ic:baseline-image" style="font-size:16px;vertical-align:-2px"></iconify-icon>',
         click: () => this.setState({ showUploadPanel: true })
       };
       
@@ -322,20 +283,15 @@
     },
     
     handleFileSelect(event) {
-      try {
-        const files = event.target.files;
-        if (!files.length) return;
-        
-        ImageUploadManager.addImages(files);
-        this.setState({ 
-          uploadStatus: `已暂存 ${files.length} 张图片，共 ${ImageUploadManager.pendingImages.length} 张待上传`
-        });
-        
-        event.target.value = '';
-      } catch (e) {
-        console.error('选择文件失败:', e);
-        this.setState({ uploadStatus: '选择文件失败' });
-      }
+      const files = event.target.files;
+      if (!files.length) return;
+      
+      ImageUploadManager.addImages(files);
+      this.setState({ 
+        uploadStatus: `已暂存 ${files.length} 张图片，共 ${ImageUploadManager.pendingImages.length} 张待上传`
+      });
+      
+      event.target.value = '';
     },
     
     async handleUpload() {
@@ -351,7 +307,7 @@
       });
       
       try {
-        const result = await ImageUploadManager.uploadAll(this.vditor);
+        const result = await ImageUploadManager.uploadAll(this.vditor, this.state.docTitle);
         
         if (result.success > 0) {
           this.setState({ 
@@ -391,66 +347,98 @@
       const { showUploadPanel, uploadStatus, docTitle } = this.state;
       const pendingImages = ImageUploadManager.pendingImages;
       
-      // 简化渲染，只渲染必要元素
-      const children = [
+      // 使用内联样式，避免React渲染错误
+      const styles = {
+        uploadHint: {
+          fontSize: '12px',
+          color: '#57606a',
+          padding: '6px',
+          backgroundColor: '#f6f8fa',
+          border: '1px dashed #d0d7de',
+          borderRadius: '4px',
+          marginTop: '8px',
+          cursor: 'pointer'
+        }
+      };
+      
+      return h('div', { className: 'vditor-full-container' }, [
         h('div', { 
           key: 'editor',
-          id: this.props.forID,
-          className: 'vditor-editor'
-        })
-      ];
-      
-      if (showUploadPanel) {
-        children.push(this.renderUploadPanel(h, pendingImages, uploadStatus, docTitle));
-      } else if (pendingImages.length > 0) {
-        children.push(h('div', {
+          id: this.props.forID, 
+          style: { 
+            minHeight: '500px',
+            marginBottom: '10px'
+          }
+        }),
+        
+        showUploadPanel && this.renderUploadPanel(h, pendingImages, uploadStatus, docTitle),
+        
+        !showUploadPanel && pendingImages.length > 0 && h('div', {
           key: 'upload-hint',
-          className: 'upload-hint',
+          style: styles.uploadHint,
           onClick: () => this.setState({ showUploadPanel: true })
         }, [
-          h('span', { style: 'margin-right:4px' }, '📷'),
+          h('iconify-icon', { 
+            icon: 'ic:baseline-image',
+            style: 'margin-right:4px;vertical-align:-2px'
+          }),
           `${pendingImages.length} 张图片待上传，点击管理`
-        ]));
-      }
-      
-      return h('div', { className: 'vditor-full-container' }, children);
+        ])
+      ]);
     },
     
     renderUploadPanel(h, pendingImages, uploadStatus, docTitle) {
       return h('div', {
         key: 'upload-panel',
-        className: 'vditor-upload-panel'
+        className: 'vditor-upload-panel',
+        style: {
+          border: '1px solid #e1e4e8',
+          borderRadius: '6px',
+          padding: '16px',
+          backgroundColor: '#f6f8fa',
+          marginTop: '10px'
+        }
       }, [
-        h('h4', { key: 'title' }, [
-          h('span', { style: 'margin-right:6px' }, '📁'),
+        h('h4', { style: { marginTop: 0 } }, [
+          h('iconify-icon', {
+            icon: 'ic:baseline-folder',
+            style: 'margin-right:6px;vertical-align:-2px'
+          }),
           '图片上传到GitHub'
         ]),
         
         docTitle && h('div', { 
-          key: 'path',
-          className: 'upload-doc-path' 
+          style: {
+            fontSize: '12px',
+            color: '#586069',
+            marginBottom: '10px',
+            padding: '4px 8px',
+            backgroundColor: '#fff',
+            borderRadius: '3px',
+            border: '1px solid #e1e4e8'
+          }
         }, `文档: ${docTitle} (图片将保存至: /images/${docTitle.replace(/\s+/g, '-').toLowerCase()}/)`),
         
-        h('div', { key: 'controls', className: 'upload-controls' }, [
+        h('div', { style: { marginBottom: '12px' } }, [
           h('input', {
             type: 'file',
             accept: 'image/*',
             multiple: true,
-            onChange: this.handleFileSelect.bind(this),
-            className: 'upload-file-input',
-            key: 'file-input'
+            onChange: this.handleFileSelect,
+            style: { marginBottom: '8px' }
           }),
           h('div', { 
-            key: 'hint',
-            className: 'upload-file-hint' 
+            style: {
+              fontSize: '12px',
+              color: '#586069'
+            }
           }, '支持多选，图片将暂存在浏览器中')
         ]),
         
         pendingImages.length > 0 && this.renderPreviewArea(h, pendingImages),
         
         uploadStatus && h('div', {
-          key: 'status',
-          className: this.getStatusClassName(uploadStatus)
+          style: this.getStatusStyle(uploadStatus)
         }, uploadStatus),
         
         this.renderActionButtons(h, pendingImages)
@@ -458,27 +446,51 @@
     },
     
     renderPreviewArea(h, pendingImages) {
-      return h('div', {
+      return h('div', { 
         key: 'preview-area',
-        className: 'upload-preview-area'
+        style: {
+          maxHeight: '200px',
+          overflowY: 'auto',
+          border: '1px dashed #d1d5da',
+          borderRadius: '4px',
+          padding: '8px',
+          marginBottom: '12px',
+          backgroundColor: '#fff'
+        }
       }, [
         h('div', { 
-          key: 'label',
-          className: 'upload-preview-label' 
+          style: {
+            fontSize: '12px',
+            color: '#586069',
+            marginBottom: '4px'
+          }
         }, `已选择 ${pendingImages.length} 张图片:`),
         ...pendingImages.map((img, idx) => h('div', {
           key: idx,
-          className: 'upload-preview-item'
+          style: {
+            display: 'inline-block',
+            margin: '4px',
+            textAlign: 'center',
+            verticalAlign: 'top'
+          }
         }, [
           h('img', {
             src: img.previewUrl,
-            className: 'upload-preview-img',
-            alt: img.name,
-            key: 'img'
+            style: {
+              maxWidth: '60px',
+              maxHeight: '60px',
+              display: 'block',
+              border: '1px solid #e1e4e8'
+            }
           }),
           h('div', { 
-            className: 'upload-preview-name',
-            key: 'name'
+            style: {
+              width: '60px',
+              fontSize: '10px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }
           }, img.name)
         ]))
       ]);
@@ -488,35 +500,85 @@
       const isUploading = ImageUploadManager.isUploading;
       
       return h('div', { 
-        key: 'buttons',
-        className: 'upload-button-container' 
+        style: {
+          display: 'flex',
+          gap: '8px'
+        }
       }, [
         h('button', {
-          onClick: this.handleUpload.bind(this),
+          onClick: this.handleUpload,
           disabled: pendingImages.length === 0 || isUploading,
-          className: 'upload-primary-button',
-          key: 'upload'
-        }, isUploading ? '上传中...' : '🚀 开始上传'),
+          style: {
+            flex: 1,
+            backgroundColor: '#2da44e',
+            color: 'white',
+            border: 'none',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            opacity: pendingImages.length === 0 ? 0.6 : 1,
+            cursor: pendingImages.length === 0 ? 'not-allowed' : 'pointer'
+          }
+        }, [
+          isUploading ? h('iconify-icon', {
+            icon: 'ic:baseline-hourglass-bottom',
+            style: 'margin-right:4px;vertical-align:-2px'
+          }) : h('iconify-icon', {
+            icon: 'ic:baseline-rocket-launch',
+            style: 'margin-right:4px;vertical-align:-2px'
+          }),
+          isUploading ? '上传中...' : '开始上传'
+        ]),
         
         h('button', {
-          onClick: this.handleClear.bind(this),
-          className: 'upload-secondary-button',
-          key: 'clear'
-        }, '清空'),
+          onClick: this.handleClear,
+          style: {
+            backgroundColor: '#f6f8fa',
+            color: '#24292f',
+            border: '1px solid #d1d5da',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }
+        }, [
+          h('iconify-icon', {
+            icon: 'ic:baseline-clear',
+            style: 'margin-right:4px;vertical-align:-2px'
+          }),
+          '清空'
+        ]),
         
         h('button', {
           onClick: () => this.setState({ showUploadPanel: false }),
-          className: 'upload-secondary-button',
-          key: 'close'
-        }, '关闭')
+          style: {
+            backgroundColor: '#f6f8fa',
+            color: '#24292f',
+            border: '1px solid #d1d5da',
+            padding: '8px 16px',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }
+        }, [
+          h('iconify-icon', {
+            icon: 'ic:baseline-close',
+            style: 'margin-right:4px;vertical-align:-2px'
+          }),
+          '关闭'
+        ])
       ]);
     },
     
-    getStatusClassName(status) {
-      const baseClass = 'upload-status';
-      if (status.includes('✅')) return `${baseClass} upload-status-success`;
-      if (status.includes('❌') || status.includes('错误')) return `${baseClass} upload-status-error`;
-      return `${baseClass} upload-status-warning`;
+    getStatusStyle(status) {
+      const isSuccess = status.includes('✅');
+      const isError = status.includes('❌') || status.includes('错误');
+      
+      return {
+        padding: '8px',
+        marginBottom: '12px',
+        borderRadius: '4px',
+        backgroundColor: isSuccess ? '#dafbe1' : isError ? '#ffebe9' : '#fff8c5',
+        border: isSuccess ? '1px solid #ace1af' : isError ? '1px solid #ffc1c1' : '1px solid #f0c23e',
+        color: isSuccess ? '#1a7f37' : isError ? '#cf222e' : '#9a6700'
+      };
     }
   });
 
@@ -526,18 +588,28 @@
       const value = this.props.value || '';
       
       return h('div', {
-        className: 'vditor-preview'
+        className: 'vditor-preview',
+        style: {
+          padding: '1rem',
+          minHeight: '200px',
+          fontSize: '14px',
+          lineHeight: '1.6',
+          whiteSpace: 'pre-wrap',
+          backgroundColor: '#f6f8fa',
+          border: '1px solid #e1e4e8',
+          borderRadius: '6px'
+        }
       }, value || '(无内容)');
     }
   });
 
   function registerPlugin() {
+    if (!window.CMS?.registerWidget || typeof Vditor === 'undefined') {
+      setTimeout(registerPlugin, 100);
+      return;
+    }
+
     try {
-      if (!window.CMS?.registerWidget || typeof Vditor === 'undefined') {
-        setTimeout(registerPlugin, 100);
-        return;
-      }
-      
       window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
       window.decapCmsVditorPlugin = { 
         version: '4.0',
@@ -551,20 +623,34 @@
     }
   }
 
-  // 简化初始化逻辑
   function init() {
-    if (typeof Vditor !== 'undefined' && window.createClass && window.h) {
-      setTimeout(registerPlugin, 500); // 给页面更多时间加载
-    } else {
+    if (!window.createClass || !window.h) {
       setTimeout(init, 100);
+      return;
+    }
+    registerPlugin();
+  }
+
+  // 等待Iconify加载
+  function checkIconify() {
+    if (typeof Iconify === 'undefined') {
+      setTimeout(checkIconify, 100);
+    } else {
+      init();
     }
   }
 
-  // 等待DOM加载完成
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
+  if (typeof Vditor !== 'undefined') {
+    checkIconify();
   } else {
-    setTimeout(init, 100);
+    const checkVditor = () => {
+      if (typeof Vditor !== 'undefined') {
+        checkIconify();
+      } else {
+        setTimeout(checkVditor, 100);
+      }
+    };
+    checkVditor();
   }
 
 })();
