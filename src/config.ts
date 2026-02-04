@@ -80,8 +80,8 @@ export const profileConfig: ProfileConfig = {
 		},
 		{
 			name: "Decap",
-			icon: "ic:twotone-edit",
-			url: "https://github.com/YumeHinata",
+			icon: "material-symbols:contract-edit",
+			url: "https://www.yumehinata.com/admin",
 		},
 
 	],
