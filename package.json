@@ -31,6 +31,7 @@
     "@iconify-json/fa6-regular": "^1.2.4",
     "@iconify-json/fa6-solid": "^1.2.4",
     "@iconify-json/material-symbols": "^1.2.50",
+    "@iconify-json/ic": "^1.2.4",
     "@iconify/svelte": "^4.2.0",
     "@swup/astro": "^1.7.0",
     "@tailwindcss/typography": "^0.5.19",
@@ -66,6 +67,7 @@
   "devDependencies": {
     "@astrojs/ts-plugin": "^1.10.6",
     "@biomejs/biome": "2.2.5",
+    "@iconify-json/ic": "^1.2.4",
     "@rollup/plugin-yaml": "^4.1.2",
     "@types/hast": "^3.0.4",
     "@types/markdown-it": "^14.1.2",

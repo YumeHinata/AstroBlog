@@ -78,6 +78,12 @@ export const profileConfig: ProfileConfig = {
 			icon: "fa6-brands:github",
 			url: "https://github.com/YumeHinata",
 		},
+		{
+			name: "Decap",
+			icon: "ic:twotone-edit",
+			url: "https://github.com/YumeHinata",
+		},
+
 	],
 };
 
