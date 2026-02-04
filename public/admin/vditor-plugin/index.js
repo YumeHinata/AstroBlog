@@ -1,113 +1,541 @@
-(function () {
+(function() {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
 
-  const VditorControl = createClass({
-    getInitialState: function () {
-      // 直接使用Decap CMS提供的唯一ID，无需自己生成
-      return { value: this.props.value || '' };
+  const ImageUploadManager = {
+    pendingImages: [],
+    isUploading: false,
+    uploadedButUncommitted: new Set(),
+    
+    config: {
+      repoOwner: 'YumeHinata',
+      repoName: 'AstroBlog',
+      branch: 'main',
+      mediaFolder: 'src/content/posts/images'
     },
-    componentDidMount: function () {
-      this.initVditor();
+    
+    commitConfig: {
+      authorName: 'Decap CMS Editor',
+      authorEmail: 'editor@example.com',
+      commitPrefix: '[Media] Upload: '
     },
-    componentWillReceiveProps: function (nextProps) {
-      if (this.vditor && nextProps.value !== this.props.value) {
-        this.vditor.setValue(nextProps.value || '');
+    
+    getToken() {
+      try {
+        const userData = JSON.parse(localStorage.getItem('decap-cms-user'));
+        if (!userData?.token) throw new Error('请先登录Decap CMS');
+        return userData.token;
+      } catch (e) {
+        throw new Error('认证失败: ' + e.message);
       }
     },
-    componentWillUnmount: function () {
-      this.vditor?.destroy?.();
+    
+    calculatePaths(filename) {
+      const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
+      const timestamp = Date.now();
+      const randomSuffix = Math.floor(Math.random() * 1000);
+      const safeFilename = `${timestamp}-${randomSuffix}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const pathInRepo = `${mediaFolder}/${safeFilename}`;
+      const markdownPath = `./images/${safeFilename}`;
+      return { pathInRepo, markdownPath };
     },
-    initVditor: function () {
+    
+    addImages(files) {
+      const newImages = Array.from(files).map(file => ({
+        file,
+        previewUrl: URL.createObjectURL(file),
+        name: file.name,
+        size: file.size,
+        id: Date.now() + Math.random()
+      }));
+      
+      this.pendingImages.push(...newImages);
+      return newImages;
+    },
+    
+    cleanupPreviews() {
+      this.pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
+      this.pendingImages = [];
+    },
+    
+    async uploadAll(vditorInstance) {
+      if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
+      if (this.isUploading) throw new Error('上传正在进行中');
+      
+      this.isUploading = true;
+      const token = this.getToken();
+      const { repoOwner, repoName, branch } = this.config;
+      const commitCfg = this.commitConfig;
+      
+      const results = { success: 0, errors: [], markdowns: [] };
+      
+      try {
+        for (const img of this.pendingImages) {
+          try {
+            const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
+            
+            const fileExists = await this.checkFileExists(token, repoOwner, repoName, pathInRepo);
+            const content = await this.fileToBase64(img.file);
+            const sha = fileExists ? fileExists.sha : null;
+            
+            await this.pushToGitHub(token, repoOwner, repoName, pathInRepo, content, branch, commitCfg, img.name, sha);
+            
+            results.success++;
+            results.markdowns.push(`![${img.name}](${markdownPath})`);
+            this.uploadedButUncommitted.add(pathInRepo);
+            
+            URL.revokeObjectURL(img.previewUrl);
+          } catch (error) {
+            results.errors.push(`${img.name}: ${error.message}`);
+          }
+        }
+        
+        if (results.markdowns.length > 0 && vditorInstance) {
+          vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
+        }
+        
+        this.pendingImages = [];
+        return results;
+      } finally {
+        this.isUploading = false;
+      }
+    },
+    
+    async checkFileExists(token, owner, repo, path) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
+      return res.status === 200 ? await res.json() : null;
+    },
+    
+    async fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    },
+    
+    async pushToGitHub(token, owner, repo, path, content, branch, commitCfg, filename, sha) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const body = {
+        message: `${commitCfg.commitPrefix}${filename}`,
+        content,
+        branch,
+        committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
+        author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
+      };
+      
+      if (sha) body.sha = sha;
+      
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+      
+      if (!res.ok) throw new Error(`GitHub API错误: ${res.status}`);
+    }
+  };
+
+  const VditorControl = createClass({
+    getInitialState() {
+      return {
+        value: this.props.value || '',
+        showUploadPanel: false,
+        uploadStatus: null
+      };
+    },
+    
+    componentDidMount() {
+      this.initVditor();
+      this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
+    },
+    
+    componentWillUnmount() {
+      clearInterval(this.pathCheckInterval);
+      if (this.vditor) this.vditor.destroy();
+      ImageUploadManager.cleanupPreviews();
+    },
+    
+    checkDocPath() {
+      const newPath = this.getCurrentDocPath();
+      if (newPath !== this.state.currentDocPath) {
+        this.setState({ currentDocPath: newPath });
+      }
+    },
+    
+    getCurrentDocPath() {
+      if (window.CMS?.activeEntry?.path) return window.CMS.activeEntry.path;
+      if (this.props.entry?.path) return this.props.entry.path;
+      return 'src/content/posts/new-post.md';
+    },
+    
+    initVditor() {
       try {
         this.vditor = new Vditor(this.props.forID, {
           height: 500,
           value: this.state.value,
           mode: 'ir',
           cache: { enable: false },
-          toolbar: [ // 完整工具栏
-            'emoji', 'headings', 'bold', 'italic', 'strike', 'link', 'quote', 'code', 'inline-code',
-            'insert-before', 'insert-after', '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
-            '|', 'upload', 'table', '|', 'undo', 'redo', '|', 'edit-mode', 'content-theme', 'code-theme',
-            'export', 'outline', 'preview', 'devtools', 'info', 'help', 'br'
-          ],
-          input: (value) => this.props.onChange(value),
-          // 图片上传配置 - Base64 方案
-          upload: {
-            accept: 'image/*',
-            multiple: true,
-            max: 5 * 1024 * 1024, // 合理的大小限制
-            handler: (files) => {
-              // 1. 保存必需引用
-              const vditor = this.vditor;
-              // 2. 处理文件为Base64
-              const promises = Array.from(files).map(file =>
-                new Promise(resolve => {
-                  const reader = new FileReader();
-                  reader.onload = e => resolve({
-                    name: file.name,
-                    markdown: `![${file.name.replace(/\.[^/.]+$/, '')}](${e.target.result})`
-                  });
-                  reader.onerror = () => resolve(null);
-                  reader.readAsDataURL(file);
-                })
-              );
-              // 3. 执行上传逻辑
-              return Promise.all(promises).then(results => {
-                const success = results.filter(x => x);
-                const succMap = {};
-                const markdownToInsert = [];
-                success.forEach(item => {
-                  succMap[item.name] = item.markdown;
-                  markdownToInsert.push(item.markdown);
-                });
-                // 4. 【关键优化】在返回前同步执行兜底插入，消除延迟
-                if (success.length > 0 && vditor && vditor.insertValue) {
-                  vditor.insertValue(markdownToInsert.join('\n'));
-                }
-                // 5. 返回标准结构（保证流程完整）
-                return { code: 0, msg: '', data: { succMap } };
-              });
-            }
+          toolbar: this.getToolbarConfig(),
+          input: (value) => {
+            this.setState({ value });
+            this.props.onChange(value);
           }
         });
+        
+        window.vditorInstance = this.vditor;
       } catch (e) {
         console.error('Vditor初始化失败:', e);
       }
     },
-    render: function () {
-      return h('div', { id: this.props.forID, style: { minHeight: '500px' } });
+    
+    getToolbarConfig() {
+      const baseTools = [
+        'emoji', 'headings', 'bold', 'italic', 'strike', 'link', 'quote', 'code', 'inline-code',
+        'insert-before', 'insert-after', '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
+        '|', 'table', '|', 'undo', 'redo', '|'
+      ];
+      
+      const uploadButton = {
+        name: 'image-upload',
+        tip: '上传图片到GitHub',
+        className: 'toolbar__image-upload',
+        icon: '<svg viewBox="0 0 1024 1024" width="16" height="16"><path d="M959.9 774.4c0 70.4-57.6 128-128 128H192c-70.4 0-128-57.6-128-128V249.6c0-70.4 57.6-128 128-128h640c70.4 0 128 57.6 128 128v524.8z" fill="#FF8A00"></path><path d="M825.6 300.8c0 57.6-44.8 102.4-102.4 102.4s-102.4-44.8-102.4-102.4 44.8-102.4 102.4-102.4 102.4 44.8 102.4 102.4zM710.4 556.8l-108.8-108.8-185.6 185.6-108.8-108.8L128 697.6v76.8c0 70.4 57.6 128 128 128h640c70.4 0 128-57.6 128-128v-76.8L710.4 556.8z" fill="#FFFFFF"></path></svg>',
+        click: () => this.setState({ showUploadPanel: true })
+      };
+      
+      const remainingTools = [
+        'edit-mode', 'content-theme', 'code-theme', 'export', 'outline', 'preview', 'devtools', 'info', 'help', 'br'
+      ];
+      
+      return [...baseTools, uploadButton, '|', ...remainingTools];
+    },
+    
+    handleFileSelect(event) {
+      const files = event.target.files;
+      if (!files.length) return;
+      
+      ImageUploadManager.addImages(files);
+      this.setState({ 
+        uploadStatus: `已暂存 ${files.length} 张图片，共 ${ImageUploadManager.pendingImages.length} 张待上传`
+      });
+      
+      event.target.value = '';
+    },
+    
+    async handleUpload() {
+      const pendingCount = ImageUploadManager.pendingImages.length;
+      if (pendingCount === 0) {
+        this.setState({ uploadStatus: '请先选择图片' });
+        return;
+      }
+      
+      this.setState({ 
+        uploadStatus: '上传中...',
+        showUploadPanel: false
+      });
+      
+      try {
+        const result = await ImageUploadManager.uploadAll(this.vditor);
+        
+        if (result.success > 0) {
+          this.setState({ 
+            uploadStatus: `✅ 上传完成！成功 ${result.success}/${pendingCount} 张`
+          });
+          setTimeout(() => this.setState({ uploadStatus: null }), 3000);
+        } else {
+          this.setState({ 
+            uploadStatus: '上传失败，请查看控制台',
+            showUploadPanel: true
+          });
+        }
+        
+        if (result.errors.length > 0) {
+          console.error('上传错误:', result.errors);
+        }
+      } catch (error) {
+        console.error('上传过程出错:', error);
+        this.setState({ 
+          uploadStatus: `错误: ${error.message}`,
+          showUploadPanel: true
+        });
+      }
+    },
+    
+    handleClear() {
+      ImageUploadManager.cleanupPreviews();
+      this.setState({ 
+        uploadStatus: '已清空暂存图片',
+        showUploadPanel: false
+      });
+      setTimeout(() => this.setState({ uploadStatus: null }), 2000);
+    },
+    
+    render() {
+      const h = window.h;
+      const { showUploadPanel, uploadStatus } = this.state;
+      const pendingImages = ImageUploadManager.pendingImages;
+      
+      return h('div', { className: 'vditor-full-container' }, [
+        h('div', { 
+          key: 'editor',
+          id: this.props.forID, 
+          style: { 
+            minHeight: '500px',
+            marginBottom: '10px'
+          }
+        }),
+        
+        showUploadPanel && this.renderUploadPanel(h, pendingImages, uploadStatus),
+        
+        !showUploadPanel && pendingImages.length > 0 && h('div', {
+          key: 'upload-hint',
+          style: styles.uploadHint,
+          onClick: () => this.setState({ showUploadPanel: true })
+        }, `📷 ${pendingImages.length} 张图片待上传，点击管理`)
+      ]);
+    },
+    
+    renderUploadPanel(h, pendingImages, uploadStatus) {
+      const currentDocPath = this.getCurrentDocPath();
+      
+      return h('div', {
+        key: 'upload-panel',
+        className: 'vditor-upload-panel',
+        style: styles.uploadPanel
+      }, [
+        h('h4', { style: { marginTop: 0 } }, '📁 图片上传到GitHub'),
+        
+        currentDocPath && h('div', { style: styles.docPath }, `文档路径: ${currentDocPath}`),
+        
+        h('div', { style: { marginBottom: '12px' } }, [
+          h('input', {
+            type: 'file',
+            accept: 'image/*',
+            multiple: true,
+            onChange: this.handleFileSelect,
+            style: { marginBottom: '8px' }
+          }),
+          h('div', { style: styles.fileHint }, '支持多选，图片将暂存在浏览器中')
+        ]),
+        
+        pendingImages.length > 0 && this.renderPreviewArea(h, pendingImages),
+        
+        uploadStatus && h('div', {
+          style: this.getStatusStyle(uploadStatus)
+        }, uploadStatus),
+        
+        this.renderActionButtons(h, pendingImages)
+      ]);
+    },
+    
+    renderPreviewArea(h, pendingImages) {
+      return h('div', { 
+        key: 'preview-area',
+        style: styles.previewArea
+      }, [
+        h('div', { style: styles.previewLabel }, `已选择 ${pendingImages.length} 张图片:`),
+        ...pendingImages.map((img, idx) => h('div', {
+          key: idx,
+          style: styles.previewItem
+        }, [
+          h('img', {
+            src: img.previewUrl,
+            style: styles.previewImage
+          }),
+          h('div', { style: styles.previewName }, img.name)
+        ]))
+      ]);
+    },
+    
+    renderActionButtons(h, pendingImages) {
+      const isUploading = ImageUploadManager.isUploading;
+      
+      return h('div', { style: styles.buttonContainer }, [
+        h('button', {
+          onClick: this.handleUpload,
+          disabled: pendingImages.length === 0 || isUploading,
+          style: {
+            ...styles.primaryButton,
+            opacity: pendingImages.length === 0 ? 0.6 : 1,
+            cursor: pendingImages.length === 0 ? 'not-allowed' : 'pointer'
+          }
+        }, isUploading ? '上传中...' : '🚀 开始上传'),
+        
+        h('button', {
+          onClick: this.handleClear,
+          style: styles.secondaryButton
+        }, '清空'),
+        
+        h('button', {
+          onClick: () => this.setState({ showUploadPanel: false }),
+          style: styles.secondaryButton
+        }, '关闭')
+      ]);
+    },
+    
+    getStatusStyle(status) {
+      const isSuccess = status.includes('✅');
+      const isError = status.includes('❌') || status.includes('错误');
+      
+      return {
+        padding: '8px',
+        marginBottom: '12px',
+        borderRadius: '4px',
+        backgroundColor: isSuccess ? '#dafbe1' : isError ? '#ffebe9' : '#fff8c5',
+        border: isSuccess ? '1px solid #ace1af' : isError ? '1px solid #ffc1c1' : '1px solid #f0c23e'
+      };
     }
   });
 
-  // 修正后的预览组件：安全渲染，避免HTML解析错误
   const VditorPreview = createClass({
-    render: function () {
+    render() {
+      const h = window.h;
       const value = this.props.value || '';
-      // 安全渲染：将内容放在纯文本节点中，并添加基础样式容器
+      
       return h('div', {
         className: 'vditor-preview',
-        style: {
-          padding: '1rem',
-          minHeight: '200px',
-          fontSize: '14px',
-          lineHeight: '1.6',
-          whiteSpace: 'pre-wrap' // 保留换行和空格
-        }
+        style: styles.previewContainer
       }, value || '(无内容)');
     }
   });
 
-  // 精简的插件注册逻辑
+  const styles = {
+    uploadPanel: {
+      border: '1px solid #e1e4e8',
+      borderRadius: '6px',
+      padding: '16px',
+      backgroundColor: '#f6f8fa',
+      marginTop: '10px'
+    },
+    docPath: {
+      fontSize: '12px',
+      color: '#586069',
+      marginBottom: '10px',
+      padding: '4px 8px',
+      backgroundColor: '#fff',
+      borderRadius: '3px',
+      border: '1px solid #e1e4e8'
+    },
+    fileHint: {
+      fontSize: '12px',
+      color: '#586069'
+    },
+    previewArea: {
+      maxHeight: '200px',
+      overflowY: 'auto',
+      border: '1px dashed #d1d5da',
+      borderRadius: '4px',
+      padding: '8px',
+      marginBottom: '12px',
+      backgroundColor: '#fff'
+    },
+    previewLabel: {
+      fontSize: '12px',
+      color: '#586069',
+      marginBottom: '4px'
+    },
+    previewItem: {
+      display: 'inline-block',
+      margin: '4px',
+      textAlign: 'center',
+      verticalAlign: 'top'
+    },
+    previewImage: {
+      maxWidth: '60px',
+      maxHeight: '60px',
+      display: 'block',
+      border: '1px solid #e1e4e8'
+    },
+    previewName: {
+      width: '60px',
+      fontSize: '10px',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap'
+    },
+    buttonContainer: {
+      display: 'flex',
+      gap: '8px'
+    },
+    primaryButton: {
+      flex: 1,
+      backgroundColor: '#2da44e',
+      color: 'white',
+      border: 'none',
+      padding: '8px 16px',
+      borderRadius: '4px'
+    },
+    secondaryButton: {
+      backgroundColor: '#f6f8fa',
+      color: '#24292f',
+      border: '1px solid #d1d5da',
+      padding: '8px 16px',
+      borderRadius: '4px',
+      cursor: 'pointer'
+    },
+    uploadHint: {
+      fontSize: '12px',
+      color: '#57606a',
+      padding: '6px',
+      backgroundColor: '#f6f8fa',
+      border: '1px dashed #d0d7de',
+      borderRadius: '4px',
+      marginTop: '8px',
+      cursor: 'pointer'
+    },
+    previewContainer: {
+      padding: '1rem',
+      minHeight: '200px',
+      fontSize: '14px',
+      lineHeight: '1.6',
+      whiteSpace: 'pre-wrap',
+      backgroundColor: '#f6f8fa',
+      border: '1px solid #e1e4e8',
+      borderRadius: '6px'
+    }
+  };
+
   function registerPlugin() {
-    if (window.CMS?.registerWidget && typeof Vditor !== 'undefined') {
-      window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
-      window.decapCmsVditorPlugin = true;
-      console.log('✅ Vditor插件已注册');
-    } else {
+    if (!window.CMS?.registerWidget || typeof Vditor === 'undefined') {
       setTimeout(registerPlugin, 100);
+      return;
+    }
+
+    try {
+      window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
+      window.decapCmsVditorPlugin = { 
+        version: '3.0',
+        hasUpload: true,
+        manager: ImageUploadManager
+      };
+      
+      console.log('✅ Vditor插件已注册');
+    } catch(e) {
+      console.error('插件注册失败:', e);
     }
   }
-  // 启动
-  registerPlugin();
+
+  function init() {
+    if (!window.createClass || !window.h) {
+      setTimeout(init, 100);
+      return;
+    }
+    registerPlugin();
+  }
+
+  if (typeof Vditor !== 'undefined') {
+    init();
+  } else {
+    const checkVditor = () => {
+      typeof Vditor !== 'undefined' ? init() : setTimeout(checkVditor, 100);
+    };
+    checkVditor();
+  }
+
 })();
