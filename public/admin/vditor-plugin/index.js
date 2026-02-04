@@ -1,4 +1,4 @@
-(function() {
+(function () {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
 
@@ -6,20 +6,20 @@
     pendingImages: [],
     isUploading: false,
     uploadedButUncommitted: new Set(),
-    
+
     config: {
       repoOwner: 'YumeHinata',
       repoName: 'AstroBlog',
       branch: 'main',
       mediaFolder: 'src/content/posts/images'
     },
-    
+
     commitConfig: {
       authorName: 'Decap CMS Editor',
       authorEmail: 'editor@example.com',
       commitPrefix: '[Media] Upload: '
     },
-    
+
     getToken() {
       try {
         const userData = JSON.parse(localStorage.getItem('decap-cms-user'));
@@ -29,17 +29,29 @@
         throw new Error('认证失败: ' + e.message);
       }
     },
-    
-    calculatePaths(filename) {
+
+    calculatePaths(filename, docTitle) {
+
+      const sanitizeForPath = (str) => {
+        return str
+          .trim()
+          .toLowerCase()
+          .replace(/[^\w\u4e00-\u9fa5\s-]/g, '') // 保留中英文、数字、空格、连字符
+          .replace(/\s+/g, '-'); // 空格变连字符
+      };
+      let folderName = 'untitled'; // 默认文件夹名
+      if (docTitle && docTitle !== 'new-post') {
+        folderName = sanitizeForPath(docTitle);
+      }
       const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000);
-      const safeFilename = `${timestamp}-${randomSuffix}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const pathInRepo = `${mediaFolder}/${safeFilename}`;
-      const markdownPath = `./images/${safeFilename}`;
-      return { pathInRepo, markdownPath };
+      const targetDirInRepo = `${mediaFolder}/${folderName}`;
+      const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const pathInRepo = `${targetDirInRepo}/${safeFilename}`;
+      const markdownPath = `./images/${folderName}/${safeFilename}`;
+
+      return { pathInRepo, markdownPath, folderName };
     },
-    
+
     addImages(files) {
       const newImages = Array.from(files).map(file => ({
         file,
@@ -48,65 +60,64 @@
         size: file.size,
         id: Date.now() + Math.random()
       }));
-      
+
       this.pendingImages.push(...newImages);
       return newImages;
     },
-    
+
     cleanupPreviews() {
       this.pendingImages.forEach(img => URL.revokeObjectURL(img.previewUrl));
       this.pendingImages = [];
     },
-    
+
     async uploadAll(vditorInstance) {
       if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
       if (this.isUploading) throw new Error('上传正在进行中');
-      
+
       this.isUploading = true;
       const token = this.getToken();
       const { repoOwner, repoName, branch } = this.config;
       const commitCfg = this.commitConfig;
-      
+
       const results = { success: 0, errors: [], markdowns: [] };
-      
+
       try {
         for (const img of this.pendingImages) {
           try {
-            const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
-            
+            const { pathInRepo, markdownPath, folderName } = this.calculatePaths(img.name, currentDocTitle);
             const fileExists = await this.checkFileExists(token, repoOwner, repoName, pathInRepo);
             const content = await this.fileToBase64(img.file);
             const sha = fileExists ? fileExists.sha : null;
-            
+
             await this.pushToGitHub(token, repoOwner, repoName, pathInRepo, content, branch, commitCfg, img.name, sha);
-            
+
             results.success++;
             results.markdowns.push(`![${img.name}](${markdownPath})`);
             this.uploadedButUncommitted.add(pathInRepo);
-            
+
             URL.revokeObjectURL(img.previewUrl);
           } catch (error) {
             results.errors.push(`${img.name}: ${error.message}`);
           }
         }
-        
+
         if (results.markdowns.length > 0 && vditorInstance) {
           vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
         }
-        
+
         this.pendingImages = [];
         return results;
       } finally {
         this.isUploading = false;
       }
     },
-    
+
     async checkFileExists(token, owner, repo, path) {
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
       return res.status === 200 ? await res.json() : null;
     },
-    
+
     async fileToBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -115,7 +126,7 @@
         reader.readAsDataURL(file);
       });
     },
-    
+
     async pushToGitHub(token, owner, repo, path, content, branch, commitCfg, filename, sha) {
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const body = {
@@ -125,9 +136,9 @@
         committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
         author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
       };
-      
+
       if (sha) body.sha = sha;
-      
+
       const res = await fetch(url, {
         method: 'PUT',
         headers: {
@@ -136,7 +147,7 @@
         },
         body: JSON.stringify(body)
       });
-      
+
       if (!res.ok) throw new Error(`GitHub API错误: ${res.status}`);
     }
   };
@@ -149,31 +160,58 @@
         uploadStatus: null
       };
     },
-    
+
     componentDidMount() {
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
     },
-    
+
     componentWillUnmount() {
       clearInterval(this.pathCheckInterval);
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
     },
-    
+
     checkDocPath() {
       const newPath = this.getCurrentDocPath();
       if (newPath !== this.state.currentDocPath) {
         this.setState({ currentDocPath: newPath });
       }
     },
-    
-    getCurrentDocPath() {
-      if (window.CMS?.activeEntry?.path) return window.CMS.activeEntry.path;
-      if (this.props.entry?.path) return this.props.entry.path;
-      return 'src/content/posts/new-post.md';
+
+    getCurrentDocInfo() {
+      // 从 Decap CMS 全局状态获取
+      if (window.CMS?.activeEntry) {
+        const entry = window.CMS.activeEntry;
+        return {
+          path: entry.path || '',
+          title: entry.data?.title || '未命名文档',
+          slug: entry.slug || ''
+        };
+      }
     },
-    
+
+    // 清理标题用于路径
+    sanitizeForPath(str) {
+      return str
+        .trim()
+        .toLowerCase()
+        .replace(/[^\w\u4e00-\u9fa5\s-]/g, '')
+        .replace(/\s+/g, '-');
+    },
+
+    // 修改组件中的检查函数
+    checkDocPath() {
+      const newDocInfo = this.getCurrentDocInfo();
+      // 比较当前标题是否有变化
+      if (newDocInfo.title !== this.state.currentDocTitle) {
+        this.setState({
+          currentDocTitle: newDocInfo.title,
+          currentDocSlug: newDocInfo.slug
+        });
+      }
+    },
+
     initVditor() {
       try {
         this.vditor = new Vditor(this.props.forID, {
@@ -187,20 +225,20 @@
             this.props.onChange(value);
           }
         });
-        
+
         window.vditorInstance = this.vditor;
       } catch (e) {
         console.error('Vditor初始化失败:', e);
       }
     },
-    
+
     getToolbarConfig() {
       const baseTools = [
         'emoji', 'headings', 'bold', 'italic', 'strike', 'link', 'quote', 'code', 'inline-code',
         'insert-before', 'insert-after', '|', 'list', 'ordered-list', 'check', 'outdent', 'indent',
         '|', 'table', '|', 'undo', 'redo', '|'
       ];
-      
+
       const uploadButton = {
         name: 'image-upload',
         tip: '上传图片到GitHub',
@@ -208,91 +246,91 @@
         icon: '<svg viewBox="0 0 1024 1024" width="16" height="16"><path d="M959.9 774.4c0 70.4-57.6 128-128 128H192c-70.4 0-128-57.6-128-128V249.6c0-70.4 57.6-128 128-128h640c70.4 0 128 57.6 128 128v524.8z" fill="#FF8A00"></path><path d="M825.6 300.8c0 57.6-44.8 102.4-102.4 102.4s-102.4-44.8-102.4-102.4 44.8-102.4 102.4-102.4 102.4 44.8 102.4 102.4zM710.4 556.8l-108.8-108.8-185.6 185.6-108.8-108.8L128 697.6v76.8c0 70.4 57.6 128 128 128h640c70.4 0 128-57.6 128-128v-76.8L710.4 556.8z" fill="#FFFFFF"></path></svg>',
         click: () => this.setState({ showUploadPanel: true })
       };
-      
+
       const remainingTools = [
         'edit-mode', 'content-theme', 'code-theme', 'export', 'outline', 'preview', 'devtools', 'info', 'help', 'br'
       ];
-      
+
       return [...baseTools, uploadButton, '|', ...remainingTools];
     },
-    
+
     handleFileSelect(event) {
       const files = event.target.files;
       if (!files.length) return;
-      
+
       ImageUploadManager.addImages(files);
-      this.setState({ 
+      this.setState({
         uploadStatus: `已暂存 ${files.length} 张图片，共 ${ImageUploadManager.pendingImages.length} 张待上传`
       });
-      
+
       event.target.value = '';
     },
-    
+
     async handleUpload() {
       const pendingCount = ImageUploadManager.pendingImages.length;
       if (pendingCount === 0) {
         this.setState({ uploadStatus: '请先选择图片' });
         return;
       }
-      
-      this.setState({ 
+
+      this.setState({
         uploadStatus: '上传中...',
         showUploadPanel: false
       });
-      
+
       try {
         const result = await ImageUploadManager.uploadAll(this.vditor);
-        
+
         if (result.success > 0) {
-          this.setState({ 
+          this.setState({
             uploadStatus: `✅ 上传完成！成功 ${result.success}/${pendingCount} 张`
           });
           setTimeout(() => this.setState({ uploadStatus: null }), 3000);
         } else {
-          this.setState({ 
+          this.setState({
             uploadStatus: '上传失败，请查看控制台',
             showUploadPanel: true
           });
         }
-        
+
         if (result.errors.length > 0) {
           console.error('上传错误:', result.errors);
         }
       } catch (error) {
         console.error('上传过程出错:', error);
-        this.setState({ 
+        this.setState({
           uploadStatus: `错误: ${error.message}`,
           showUploadPanel: true
         });
       }
     },
-    
+
     handleClear() {
       ImageUploadManager.cleanupPreviews();
-      this.setState({ 
+      this.setState({
         uploadStatus: '已清空暂存图片',
         showUploadPanel: false
       });
       setTimeout(() => this.setState({ uploadStatus: null }), 2000);
     },
-    
+
     render() {
       const h = window.h;
       const { showUploadPanel, uploadStatus } = this.state;
       const pendingImages = ImageUploadManager.pendingImages;
-      
+
       return h('div', { className: 'vditor-full-container' }, [
-        h('div', { 
+        h('div', {
           key: 'editor',
-          id: this.props.forID, 
-          style: { 
+          id: this.props.forID,
+          style: {
             minHeight: '500px',
             marginBottom: '10px'
           }
         }),
-        
+
         showUploadPanel && this.renderUploadPanel(h, pendingImages, uploadStatus),
-        
+
         !showUploadPanel && pendingImages.length > 0 && h('div', {
           key: 'upload-hint',
           style: styles.uploadHint,
@@ -300,19 +338,21 @@
         }, `📷 ${pendingImages.length} 张图片待上传，点击管理`)
       ]);
     },
-    
+
     renderUploadPanel(h, pendingImages, uploadStatus) {
       const currentDocPath = this.getCurrentDocPath();
-      
+
       return h('div', {
         key: 'upload-panel',
         className: 'vditor-upload-panel',
         style: styles.uploadPanel
       }, [
         h('h4', { style: { marginTop: 0 } }, '📁 图片上传到GitHub'),
-        
-        currentDocPath && h('div', { style: styles.docPath }, `文档路径: ${currentDocPath}`),
-        
+
+        this.getCurrentDocInfo().title && h('div', { style: styles.docPath },
+          `文档: ${this.getCurrentDocInfo().title} (图片将保存至: /images/${this.sanitizeForPath(this.getCurrentDocInfo().title)}/)`
+        ),
+
         h('div', { style: { marginBottom: '12px' } }, [
           h('input', {
             type: 'file',
@@ -323,19 +363,19 @@
           }),
           h('div', { style: styles.fileHint }, '支持多选，图片将暂存在浏览器中')
         ]),
-        
+
         pendingImages.length > 0 && this.renderPreviewArea(h, pendingImages),
-        
+
         uploadStatus && h('div', {
           style: this.getStatusStyle(uploadStatus)
         }, uploadStatus),
-        
+
         this.renderActionButtons(h, pendingImages)
       ]);
     },
-    
+
     renderPreviewArea(h, pendingImages) {
-      return h('div', { 
+      return h('div', {
         key: 'preview-area',
         style: styles.previewArea
       }, [
@@ -352,10 +392,10 @@
         ]))
       ]);
     },
-    
+
     renderActionButtons(h, pendingImages) {
       const isUploading = ImageUploadManager.isUploading;
-      
+
       return h('div', { style: styles.buttonContainer }, [
         h('button', {
           onClick: this.handleUpload,
@@ -366,23 +406,23 @@
             cursor: pendingImages.length === 0 ? 'not-allowed' : 'pointer'
           }
         }, isUploading ? '上传中...' : '🚀 开始上传'),
-        
+
         h('button', {
           onClick: this.handleClear,
           style: styles.secondaryButton
         }, '清空'),
-        
+
         h('button', {
           onClick: () => this.setState({ showUploadPanel: false }),
           style: styles.secondaryButton
         }, '关闭')
       ]);
     },
-    
+
     getStatusStyle(status) {
       const isSuccess = status.includes('✅');
       const isError = status.includes('❌') || status.includes('错误');
-      
+
       return {
         padding: '8px',
         marginBottom: '12px',
@@ -397,7 +437,7 @@
     render() {
       const h = window.h;
       const value = this.props.value || '';
-      
+
       return h('div', {
         className: 'vditor-preview',
         style: styles.previewContainer
@@ -509,14 +549,14 @@
 
     try {
       window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
-      window.decapCmsVditorPlugin = { 
+      window.decapCmsVditorPlugin = {
         version: '3.0',
         hasUpload: true,
         manager: ImageUploadManager
       };
-      
+
       console.log('✅ Vditor插件已注册');
-    } catch(e) {
+    } catch (e) {
       console.error('插件注册失败:', e);
     }
   }
