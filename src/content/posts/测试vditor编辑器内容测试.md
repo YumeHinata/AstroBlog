@@ -11,5 +11,3 @@ draft: false
 我是正文内
 
 输入点内容
-
-![PRTS终端.jpg](./images/测试vditor编辑器内容测试/PRTS终端.jpg)
