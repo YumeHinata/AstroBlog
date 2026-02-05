@@ -12,7 +12,7 @@ draft: false
 
 输入点内容
 
-![144.png](./images/测试vditor编辑器内容测试/144.png)
-![234.jpg](./images/测试vditor编辑器内容测试/234.jpg)
-![1111.png](./images/测试vditor编辑器内容测试/1111.png)
-![87157158_p0.jpg](./images/测试vditor编辑器内容测试/87157158_p0.jpg)
+![9e3d1bb6f18d1f6703372f8d4e01cd02_2097320116060775889.gif](./images/测试vditor编辑器内容测试/9e3d1bb6f18d1f6703372f8d4e01cd02_2097320116060775889.gif)
+![13.jpg](./images/测试vditor编辑器内容测试/13.jpg)
+![13de9fbf6c81800ae3c3336abf3533fa828b4733.gif](./images/测试vditor编辑器内容测试/13de9fbf6c81800ae3c3336abf3533fa828b4733.gif)
+![100112434_p0.png](./images/测试vditor编辑器内容测试/100112434_p0.png)
