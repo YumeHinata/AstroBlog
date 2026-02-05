@@ -11,8 +11,3 @@ draft: false
 我是正文内
 
 输入点内容
-
-![144.png](./images/测试vditor编辑器内容测试/144.png)
-![234.jpg](./images/测试vditor编辑器内容测试/234.jpg)
-![1111.png](./images/测试vditor编辑器内容测试/1111.png)
-![87157158_p0.jpg](./images/测试vditor编辑器内容测试/87157158_p0.jpg)
