@@ -253,40 +253,6 @@
     componentDidMount() {
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
-
-      // 注册 preEntryPersist 事件，确保媒体文件和内容一起提交
-      if (window.CMS) {
-        window.CMS.on('PRE_ENTRY_PERSIST', async (collection, entry) => {
-          if (pendingMediaFiles.length > 0) {
-            // 获取token
-            const token = ImageUploadManager.getToken();
-            const { repoOwner, repoName } = ImageUploadManager.config;
-            const contentBranch = ImageUploadManager.getCurrentContentBranch();
-
-            // 提交所有待处理的媒体文件
-            for (const mediaFile of pendingMediaFiles) {
-              try {
-                await this.commitMediaFile(
-                  token,
-                  repoOwner,
-                  repoName,
-                  mediaFile.path,
-                  mediaFile.content,
-                  contentBranch,
-                  mediaFile.filename,
-                  ImageUploadManager.commitConfig,
-                  mediaFile.sha
-                );
-              } catch (error) {
-                console.error('提交媒体文件失败:', error);
-              }
-            }
-
-            // 清空待提交列表
-            pendingMediaFiles = [];
-          }
-        });
-      }
     },
 
     // 提交单个媒体文件
@@ -321,6 +287,44 @@
       clearInterval(this.pathCheckInterval);
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
+    },
+
+    control: {
+      // 这个方法将在外部调用，当需要提交内容时
+      async persist(entry) {
+        if (pendingMediaFiles.length > 0) {
+          try {
+            // 获取token
+            const token = ImageUploadManager.getToken();
+            const { repoOwner, repoName } = ImageUploadManager.config;
+            const contentBranch = ImageUploadManager.getCurrentContentBranch();
+            
+            // 提交所有待处理的媒体文件
+            for (const mediaFile of pendingMediaFiles) {
+              try {
+                await this.commitMediaFile(
+                  token, 
+                  repoOwner, 
+                  repoName, 
+                  mediaFile.path, 
+                  mediaFile.content, 
+                  contentBranch,
+                  mediaFile.filename,
+                  ImageUploadManager.commitConfig,
+                  mediaFile.sha
+                );
+              } catch (error) {
+                console.error('提交媒体文件失败:', error);
+              }
+            }
+            
+            // 清空待提交列表
+            pendingMediaFiles = [];
+          } catch (error) {
+            console.error('处理媒体文件时出错:', error);
+          }
+        }
+      }
     },
 
     checkDocPath() {
@@ -670,9 +674,65 @@
     }
 
     try {
-      window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
+      // 注册widget，添加数据持久化方法
+      const widget = {
+        control: VditorControl,
+        preview: VditorPreview,
+        // 添加一个方法用于在提交前处理媒体文件
+        beforeSubmit: async function(entry) {
+          if (window.vditorInstance && window.vditorInstance.getValue) {
+            // 更新entry中的内容
+            entry.set(window.vditorInstance.getValue());
+          }
+          
+          // 处理待提交的媒体文件
+          if (pendingMediaFiles.length > 0) {
+            try {
+              // 获取token
+              const token = ImageUploadManager.getToken();
+              const { repoOwner, repoName } = ImageUploadManager.config;
+              const contentBranch = ImageUploadManager.getCurrentContentBranch();
+              
+              // 提交所有待处理的媒体文件
+              for (const mediaFile of pendingMediaFiles) {
+                try {
+                  await VditorControl.prototype.commitMediaFile.call(
+                    { commitMediaFile: VditorControl.prototype.commitMediaFile }, // 为调用提供上下文
+                    token, 
+                    repoOwner, 
+                    repoName, 
+                    mediaFile.path, 
+                    mediaFile.content, 
+                    contentBranch,
+                    mediaFile.filename,
+                    ImageUploadManager.commitConfig,
+                    mediaFile.sha
+                  );
+                } catch (error) {
+                  console.error('提交媒体文件失败:', error);
+                }
+              }
+              
+              // 清空待提交列表
+              pendingMediaFiles = [];
+            } catch (error) {
+              console.error('处理媒体文件时出错:', error);
+            }
+          }
+        }
+      };
+      
+      window.CMS.registerWidget('vditor', widget.control, widget.preview);
+      
+      // 添加beforeSubmit处理器到全局，供CMS调用
+      if (window.CMS_EVENTS) {
+        window.CMS_EVENTS.beforeSubmit = widget.beforeSubmit;
+      } else {
+        window.CMS_EVENTS = { beforeSubmit: widget.beforeSubmit };
+      }
+
       window.decapCmsVditorPlugin = {
-        version: '4.0',
+        version: '4.1',
         hasUpload: true,
         manager: ImageUploadManager
       };
