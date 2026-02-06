@@ -1,7 +1,9 @@
-index.js
 (function () {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
+
+  // 全局变量用于存储待提交的图片
+  let pendingMediaFiles = [];
 
   const ImageUploadManager = {
     pendingImages: [],
@@ -11,13 +13,13 @@ index.js
     config: {
       repoOwner: 'YumeHinata',
       repoName: 'AstroBlog',
-      branch: 'main', // 默认分支
-      mediaFolder: 'src/content/posts/images'
+      branch: 'main',
+      mediaFolder: 'src/content/posts'  // 修改：使用posts根目录，然后根据slug创建子目录
     },
 
     commitConfig: {
       authorName: 'Decap CMS Editor',
-      authorEmail: 'editor@example.com',
+      authorEmail: 'editor@yumehinata.com',
       commitPrefix: '[Media] Upload: '
     },
 
@@ -31,12 +33,64 @@ index.js
       }
     },
 
+    // 从URL中提取slug
+    extractSlugFromUrl() {
+      const url = window.location.href;
+      try {
+        // 提取URL中的slug部分，例如从 https://www.yumehinata.com/admin#/collections/terminal/entries/slug
+        const match = url.match(/\/entries\/([^\/\?#]+)/);
+        if (match && match[1]) {
+          const decodedSlug = decodeURIComponent(match[1]); // 解码URL编码的slug
+          // 检查是否是有效的slug格式（不是特殊占位符或无法解码的内容）
+          if (decodedSlug && decodedSlug !== 'new' && decodedSlug !== 'create' && decodedSlug !== 'default') {
+            return decodedSlug;
+          }
+        }
+      } catch (e) {
+        console.error('无法从URL中提取slug:', e);
+      }
+      return null; // 返回null表示无法获取有效slug
+    },
+
+    // 从编辑器内容或CMS数据中尝试获取标题并生成slug
+    getTitleBasedSlug() {
+      try {
+        // 尝试从CMS的活动条目获取标题
+        if (window.CMS?.activeEntry?.data) {
+          const title = window.CMS.activeEntry.data.title;
+          if (title) {
+            // 简单的标题到slug转换
+            return title.toLowerCase()
+              .replace(/[^\w\u4e00-\u9fff\s-]/g, '')  // 保留中文、英文字母、数字、空格和连字符
+              .trim()
+              .replace(/\s+/g, '-');  // 空格替换为连字符
+          }
+        }
+      } catch (e) {
+        console.error('无法从CMS数据中生成slug:', e);
+      }
+      return null;
+    },
+
     calculatePaths(filename) {
       const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
+
+      // 尝试获取slug，如果获取不到则尝试从标题生成，否则抛出错误
+      let slug = this.extractSlugFromUrl();
+      if (!slug) {
+        slug = this.getTitleBasedSlug();
+      }
+
+      if (!slug) {
+        throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
+      }
+
       const timestamp = Date.now();
       const randomSuffix = Math.floor(Math.random() * 1000);
       const safeFilename = `${timestamp}-${randomSuffix}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-      const pathInRepo = `${mediaFolder}/${safeFilename}`;
+
+      // 在post目录下创建以slug命名的子目录存放图片
+      const pathInRepo = `${mediaFolder}/${slug}/images/${safeFilename}`;
       const markdownPath = `./images/${safeFilename}`;
       return { pathInRepo, markdownPath };
     },
@@ -59,50 +113,57 @@ index.js
       this.pendingImages = [];
     },
 
-    async uploadAll(vditorInstance) {
-      if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
-      if (this.isUploading) throw new Error('上传正在进行中');
+    // 全局变量用于存储待提交的图片
+    uploadedMediaFiles: [],
 
-      this.isUploading = true;
+    // 准备上传所有图片并返回markdown字符串，但暂不提交
+    async prepareUploadAll() {
+      if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
+
+      // 在开始上传前验证能否获取到slug
+      try {
+        this.calculatePaths('test.jpg'); // 只是为了验证能否成功计算路径
+      } catch (error) {
+        throw new Error(error.message);
+      }
+
       const token = this.getToken();
-      // 获取当前内容的实际分支
       const contentBranch = this.getCurrentContentBranch();
       const { repoOwner, repoName } = this.config;
       const commitCfg = this.commitConfig;
 
-      const results = { success: 0, errors: [], markdowns: [] };
+      const results = { success: 0, errors: [], markdowns: [], mediaFiles: [] };
 
-      try {
-        for (const img of this.pendingImages) {
-          try {
-            const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
+      for (const img of this.pendingImages) {
+        try {
+          const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
-            const fileExists = await this.checkFileExists(token, repoOwner, repoName, pathInRepo, contentBranch);
-            const content = await this.fileToBase64(img.file);
-            const sha = fileExists ? fileExists.sha : null;
+          const fileExists = await this.checkFileExists(token, repoOwner, repoName, pathInRepo, contentBranch);
+          const content = await this.fileToBase64(img.file);
+          const sha = fileExists ? fileExists.sha : null;
 
-            // 上传到与内容相同的分支
-            await this.pushToGitHub(token, repoOwner, repoName, pathInRepo, content, contentBranch, commitCfg, img.name, sha);
+          // 不立即提交，而是存储到待提交列表
+          results.mediaFiles.push({
+            path: pathInRepo,
+            content: content,
+            sha: sha,
+            filename: img.name
+          });
 
-            results.success++;
-            results.markdowns.push(`![${img.name}](${markdownPath})`);
-            this.uploadedButUncommitted.add(pathInRepo);
+          results.success++;
+          results.markdowns.push(`![${img.name}](${markdownPath})`);
 
-            URL.revokeObjectURL(img.previewUrl);
-          } catch (error) {
-            results.errors.push(`${img.name}: ${error.message}`);
-          }
+          this.uploadedButUncommitted.add(pathInRepo);
+        } catch (error) {
+          results.errors.push(`${img.name}: ${error.message}`);
         }
-
-        if (results.markdowns.length > 0 && vditorInstance) {
-          vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
-        }
-
-        this.pendingImages = [];
-        return results;
-      } finally {
-        this.isUploading = false;
       }
+
+      // 将媒体文件添加到全局待提交列表
+      pendingMediaFiles.push(...results.mediaFiles);
+
+      this.pendingImages = [];
+      return results;
     },
 
     // 获取当前内容所在分支
@@ -113,14 +174,14 @@ index.js
         // 如果配置了本地后端，可能有不同的分支处理方式
         return this.config.branch;
       }
-      
+
       // 如果有活动条目，可能可以通过路径或其他属性推断分支
       if (window.CMS?.activeEntry) {
         // 对于GitHub后端，Decap CMS默认情况下会使用配置的分支
         // 如果需要更高级的分支检测，可能需要解析entry信息
         return this.config.branch;
       }
-      
+
       // 默认返回配置的分支
       return this.config.branch;
     },
@@ -130,7 +191,7 @@ index.js
       if (branch) {
         url += `?ref=${branch}`;
       }
-      
+
       const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
       return res.status === 200 ? await res.json() : null;
     },
@@ -167,7 +228,7 @@ index.js
 
       if (!res.ok) throw new Error(`GitHub API错误: ${res.status}`);
     },
-    
+
     // 获取当前文章的分支信息
     getCurrentEntryBranch() {
       // 如果文章在 draft 状态，通常是在特定分支上
@@ -192,6 +253,68 @@ index.js
     componentDidMount() {
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
+
+      // 注册 preEntryPersist 事件，确保媒体文件和内容一起提交
+      if (window.CMS) {
+        window.CMS.on('PRE_ENTRY_PERSIST', async (collection, entry) => {
+          if (pendingMediaFiles.length > 0) {
+            // 获取token
+            const token = ImageUploadManager.getToken();
+            const { repoOwner, repoName } = ImageUploadManager.config;
+            const contentBranch = ImageUploadManager.getCurrentContentBranch();
+
+            // 提交所有待处理的媒体文件
+            for (const mediaFile of pendingMediaFiles) {
+              try {
+                await this.commitMediaFile(
+                  token,
+                  repoOwner,
+                  repoName,
+                  mediaFile.path,
+                  mediaFile.content,
+                  contentBranch,
+                  mediaFile.filename,
+                  ImageUploadManager.commitConfig,
+                  mediaFile.sha
+                );
+              } catch (error) {
+                console.error('提交媒体文件失败:', error);
+              }
+            }
+
+            // 清空待提交列表
+            pendingMediaFiles = [];
+          }
+        });
+      }
+    },
+
+    // 提交单个媒体文件
+    async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const body = {
+        message: `${commitCfg.commitPrefix}${filename}`,
+        content,
+        branch,
+        committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
+        author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
+      };
+
+      if (sha) body.sha = sha;
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.text();
+        throw new Error(`GitHub API错误: ${res.status}, ${errorData}`);
+      }
     },
 
     componentWillUnmount() {
@@ -275,21 +398,21 @@ index.js
       }
 
       this.setState({
-        uploadStatus: '上传中...',
+        uploadStatus: '准备中...',
         showUploadPanel: false
       });
 
       try {
-        const result = await ImageUploadManager.uploadAll(this.vditor);
+        const result = await ImageUploadManager.prepareUploadAll();
 
         if (result.success > 0) {
           this.setState({
-            uploadStatus: `✅ 上传完成！成功 ${result.success}/${pendingCount} 张`
+            uploadStatus: `✅ 准备完成！${result.success}/${pendingCount} 张图片将在保存时一并提交`
           });
-          setTimeout(() => this.setState({ uploadStatus: null }), 3000);
+          setTimeout(() => this.setState({ uploadStatus: null }), 5000);
         } else {
           this.setState({
-            uploadStatus: '上传失败，请查看控制台',
+            uploadStatus: '准备失败，请查看控制台',
             showUploadPanel: true
           });
         }
@@ -404,7 +527,7 @@ index.js
             opacity: pendingImages.length === 0 ? 0.6 : 1,
             cursor: pendingImages.length === 0 ? 'not-allowed' : 'pointer'
           }
-        }, isUploading ? '上传中...' : '🚀 开始上传'),
+        }, '🚀 准备上传'),
 
         h('button', {
           onClick: this.handleClear,
@@ -549,7 +672,7 @@ index.js
     try {
       window.CMS.registerWidget('vditor', VditorControl, VditorPreview);
       window.decapCmsVditorPlugin = {
-        version: '3.0',
+        version: '4.0',
         hasUpload: true,
         manager: ImageUploadManager
       };
