@@ -392,47 +392,191 @@
           };
         }
         
-        let mergedCount = 0;
-        let errors = [];
+        // 批量处理所有文件
+        const result = await this.batchCopyFilesToMain(token, files, docTitle);
         
-        // 逐个文件合并到main分支
-        for (const file of files) {
-          try {
-            console.log(`[ImageUploadManager] 合并文件: ${file.name}`);
-            const result = await this.copyFileToMain(token, file.path, docTitle);
-            if (result) {
-              mergedCount++;
-            }
-            
-            // 添加延迟避免请求过快
-            await new Promise(resolve => setTimeout(resolve, 100));
-          } catch (error) {
-            console.error(`[ImageUploadManager] 文件合并失败 ${file.name}:`, error);
-            errors.push(`${file.name}: ${error.message}`);
-          }
-        }
-        
-        console.log(`[ImageUploadManager] 合并完成，成功: ${mergedCount}, 失败: ${errors.length}`);
-        
-        if (errors.length > 0) {
-          console.warn('[ImageUploadManager] 合并错误:', errors);
-        }
-        
-        return {
-          success: mergedCount > 0,
-          mergedCount,
-          errorCount: errors.length,
-          errors: errors.length > 0 ? errors : undefined,
-          message: mergedCount > 0 ? 
-            `成功合并 ${mergedCount} 个文件到main分支` :
-            '合并失败，请查看控制台错误信息'
-        };
+        return result;
       } catch (error) {
         console.error('[ImageUploadManager] 合并媒体文件失败:', error);
         throw error;
       }
     },
     
+    // [新增] 批量复制文件到main分支，使用Git Tree API一次性提交所有文件
+    async batchCopyFilesToMain(token, files, docTitle) {
+      const { repoOwner, repoName } = this.config;
+      
+      console.log(`[ImageUploadManager] 批量复制 ${files.length} 个文件到main分支`);
+      
+      try {
+        // 1. 获取main分支的最新提交SHA
+        const mainBranchInfo = await this.getBranchInfo(token, repoOwner, repoName, 'main');
+        const latestCommitSha = mainBranchInfo.commit.sha;
+        console.log('[ImageUploadManager] 最新提交SHA:', latestCommitSha);
+        
+        // 2. 获取该提交对应的tree SHA
+        const commitDetails = await this.getCommitDetails(token, repoOwner, repoName, latestCommitSha);
+        const baseTreeSha = commitDetails.commit.tree.sha;
+        console.log('[ImageUploadManager] 基础Tree SHA:', baseTreeSha);
+        
+        // 3. 为所有文件准备新的tree
+        const newTreeItems = [];
+        
+        for (const file of files) {
+          // 获取每个文件的内容
+          const fileContent = await this.getFileContentFromBranch(token, repoOwner, repoName, file.path, this.config.mediaBranch);
+          
+          // 添加到新tree项
+          newTreeItems.push({
+            path: file.path,
+            mode: '100644', // 文件模式
+            type: 'blob',
+            content: fileContent
+          });
+        }
+        
+        // 4. 创建新的tree
+        const newTree = await this.createTree(token, repoOwner, repoName, baseTreeSha, newTreeItems);
+        console.log('[ImageUploadManager] 新Tree创建成功:', newTree.sha);
+        
+        // 5. 创建新的提交，指向这个tree
+        const commitMessage = `chore: add media files for "${docTitle}" (${files.length} files)`;
+        const newCommit = await this.createCommit(token, repoOwner, repoName, commitMessage, newTree.sha, [latestCommitSha]);
+        console.log('[ImageUploadManager] 新提交创建成功:', newCommit.sha);
+        
+        // 6. 更新main分支引用到新提交
+        const updateRefResult = await this.updateReference(token, repoOwner, repoName, 'main', newCommit.sha);
+        console.log('[ImageUploadManager] 分支引用更新成功:', updateRefResult);
+        
+        console.log(`[ImageUploadManager] 成功批量合并 ${files.length} 个文件到main分支`);
+        return {
+          success: true,
+          mergedCount: files.length,
+          errorCount: 0,
+          message: `成功批量合并 ${files.length} 个文件到main分支`
+        };
+      } catch (error) {
+        console.error('[ImageUploadManager] 批量复制文件失败:', error);
+        throw error;
+      }
+    },
+    
+    // 获取分支信息
+    async getBranchInfo(token, owner, repo, branch) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/branches/${branch}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `token ${token}` }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`获取分支信息失败: ${errorData.message || response.status}`);
+      }
+      
+      return await response.json();
+    },
+    
+    // 获取提交详情
+    async getCommitDetails(token, owner, repo, commitSha) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/git/commits/${commitSha}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `token ${token}` }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`获取提交详情失败: ${errorData.message || response.status}`);
+      }
+      
+      return await response.json();
+    },
+    
+    // 从指定分支获取文件内容
+    async getFileContentFromBranch(token, owner, repo, filePath, branch) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}?ref=${branch}`;
+      const response = await fetch(url, {
+        headers: { Authorization: `token ${token}` }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`获取文件内容失败: ${errorData.message || response.status}`);
+      }
+      
+      const data = await response.json();
+      return atob(data.content); // 解码base64内容
+    },
+    
+    // 创建Git tree
+    async createTree(token, owner, repo, baseTreeSha, treeItems) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/git/trees`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          base_tree: baseTreeSha,
+          tree: treeItems
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`创建Tree失败: ${errorData.message || response.status}`);
+      }
+      
+      return await response.json();
+    },
+    
+    // 创建提交
+    async createCommit(token, owner, repo, message, treeSha, parentShas) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/git/commits`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message,
+          tree: treeSha,
+          parents: parentShas
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`创建提交失败: ${errorData.message || response.status}`);
+      }
+      
+      return await response.json();
+    },
+    
+    // 更新引用
+    async updateReference(token, owner, repo, ref, sha) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${ref}`;
+      const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sha,
+          force: false
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`更新引用失败: ${errorData.message || response.status}`);
+      }
+      
+      return await response.json();
+    },
+
     // [修复] 改进的复制文件到main分支
     async copyFileToMain(token, filePath, docTitle) {
       const { repoOwner, repoName, mediaBranch } = this.config;
