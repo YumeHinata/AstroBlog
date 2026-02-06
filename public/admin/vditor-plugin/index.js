@@ -335,8 +335,14 @@
     },
 
     getCurrentDocPath() {
-      if (window.CMS?.activeEntry?.path) return window.CMS.activeEntry.path;
-      if (this.props.entry?.path) return this.props.entry.path;
+      if (window.CMS?.activeEntry?.path) {
+        // 解码路径中的URL编码字符
+        return decodeURIComponent(window.CMS.activeEntry.path);
+      }
+      if (this.props.entry?.path) {
+        // 解码路径中的URL编码字符
+        return decodeURIComponent(this.props.entry.path);
+      }
       return 'src/content/posts/new-post.md';
     },
 
