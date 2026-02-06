@@ -10,8 +10,7 @@
       repoOwner: 'YumeHinata',
       repoName: 'AstroBlog',
       collectionName: 'terminal',
-      mediaFolder: 'src/content/posts/images',
-      mediaBranch: 'cms/media-assets'
+      mediaFolder: 'src/content/posts/images'
     },
 
     commitConfig: {
@@ -30,24 +29,9 @@
       }
     },
 
-    extractSlugFromBranch(branchName) {
-      const match = branchName.match(/cms\/terminal\/(.+)/);
-      return match ? match[1] : null;
-    },
-
-    generateBranchName(slug) {
-      if (!slug) throw new Error('需要slug来生成分支名');
-      const safeSlug = this.slugify(slug);
-      const branchName = `cms/${this.config.collectionName}/${safeSlug}`;
-      console.log('[ImageUploadManager] 生成分支名:', branchName, '基于slug:', slug);
-      return branchName;
-    },
-
-    // [修复] 改进的slugify函数，正确处理中文字符
+    // 改进的slugify函数，正确处理中文字符
     slugify(text) {
       if (!text || text.trim() === '') return 'untitled';
-      
-      console.log('[ImageUploadManager] slugify 输入:', text);
       
       // 保留中文字符，只移除特殊字符和空格
       let result = text
@@ -60,7 +44,6 @@
         // 移除开头和结尾的连字符
         .replace(/^-+|-+$/g, '');
       
-      console.log('[ImageUploadManager] slugify 输出:', result);
       return result;
     },
 
@@ -73,13 +56,11 @@
         id: Date.now() + Math.random()
       }));
 
-      console.log('[ImageUploadManager] 添加图片:', newImages.length, '张');
       this.pendingImages.push(...newImages);
       return newImages;
     },
 
     cleanupPreviews() {
-      console.log('[ImageUploadManager] 清理预览图片');
       this.pendingImages.forEach(img => {
         try {
           URL.revokeObjectURL(img.previewUrl);
@@ -90,7 +71,7 @@
       this.pendingImages = [];
     },
 
-    // [修复] 改进的文件名处理，避免中文字符被错误转换
+    // 改进的文件名处理，避免中文字符被错误转换
     calculatePaths(filename, slug) {
       const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
       
@@ -100,13 +81,6 @@
       // 使用slug作为文件夹名
       const folderName = this.slugify(slug);
       
-      console.log('[ImageUploadManager] calculatePaths:', {
-        originalName: filename,
-        safeFilename,
-        folderName,
-        slug
-      });
-      
       // 路径：媒体文件夹/slug/文件名
       const pathInRepo = `${mediaFolder}/${folderName}/${safeFilename}`;
       // Markdown路径：相对于文章位置的路径
@@ -115,7 +89,7 @@
       return { pathInRepo, markdownPath, folderName };
     },
 
-    // [新增] 安全的文件名处理函数
+    // 安全的文件名处理函数
     safeFilename(filename) {
       // 获取文件名和扩展名
       const lastDotIndex = filename.lastIndexOf('.');
@@ -136,7 +110,6 @@
     async checkBranchExists(token, branchName) {
       const { repoOwner, repoName } = this.config;
       const url = `https://api.github.com/repos/${repoOwner}/${repoName}/branches/${encodeURIComponent(branchName)}`;
-      console.log('[ImageUploadManager] 检查分支是否存在:', url);
 
       try {
         const res = await fetch(url, {
@@ -144,60 +117,51 @@
         });
         return res.status === 200;
       } catch (error) {
-        console.error('[ImageUploadManager] 检查分支失败:', error);
+        console.error('检查分支失败:', error);
         return false;
       }
     },
 
-    // [修复] 改进的媒体文件夹检查，添加详细日志
-    async checkMediaFolderExists(token, slug) {
-      const { repoOwner, repoName, mediaBranch } = this.config;
-      const folderName = this.slugify(slug);
-      const mediaFolder = `${this.config.mediaFolder}/${folderName}`;
+    // 获取内容分支名称
+    async getContentBranchName(slug) {
+      // DecapCMS在创建草稿时会创建一个分支
+      // 分支命名模式通常是: drafts/{collectionName}/{slug} 或 cms/{collectionName}/{entryId}
+      const possibleBranchNames = [
+        `drafts/${this.config.collectionName}/${this.slugify(slug)}`,
+        `cms/${this.config.collectionName}/${this.slugify(slug)}`,
+        // 如果slug来自URL，它可能是entry ID
+        `drafts/${this.config.collectionName}/${slug}`,
+        `cms/${this.config.collectionName}/${slug}`
+      ];
       
-      const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(mediaFolder)}?ref=${mediaBranch}`;
-      console.log('[ImageUploadManager] 检查媒体文件夹:', {
-        slug,
-        folderName,
-        mediaFolder,
-        url
-      });
-
-      try {
-        const res = await fetch(url, {
-          headers: { Authorization: `token ${token}` }
-        });
-        
-        console.log('[ImageUploadManager] 检查结果状态:', res.status);
-        
-        if (res.status === 200) {
-          const data = await res.json();
-          console.log('[ImageUploadManager] 文件夹内容:', data);
-          return true;
-        } else if (res.status === 404) {
-          console.log('[ImageUploadManager] 文件夹不存在');
-          return false;
-        } else {
-          console.warn('[ImageUploadManager] 检查文件夹异常状态:', res.status);
-          return false;
+      const token = this.getToken();
+      
+      for (const branchName of possibleBranchNames) {
+        if (await this.checkBranchExists(token, branchName)) {
+          return branchName;
         }
-      } catch (error) {
-        console.error('[ImageUploadManager] 检查媒体文件夹失败:', error);
-        return false;
       }
+      
+      // 如果找不到现有分支，返回基于slug的标准格式
+      return `cms/${this.config.collectionName}/${this.slugify(slug)}`;
     },
 
-    // [修复] 改进的上传到媒体分支，确保上传成功
-    async uploadToMediaBranch(vditorInstance, slug, docTitle) {
+    // 在内容分支中直接上传图片
+    async uploadToContentBranch(vditorInstance, slug, docTitle) {
       if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
       if (this.isUploading) throw new Error('上传正在进行中');
 
       this.isUploading = true;
-      console.log('[ImageUploadManager] 上传到媒体分支，slug:', slug, 'docTitle:', docTitle);
 
       const token = this.getToken();
-      const { repoOwner, repoName, mediaBranch } = this.config;
+      const { repoOwner, repoName } = this.config;
       const commitCfg = this.commitConfig;
+
+      // 获取内容分支名称
+      const contentBranch = await this.getContentBranchName(slug);
+      if (!contentBranch) {
+        throw new Error(`无法找到内容分支，slug: ${slug}`);
+      }
 
       const results = { 
         success: 0, 
@@ -207,50 +171,40 @@
       };
 
       try {
-        // 确保媒体分支存在
-        console.log('[ImageUploadManager] 确保媒体分支存在...');
-        await this.ensureMediaBranchExists(token);
-        console.log('[ImageUploadManager] 媒体分支已确认存在');
-        
+        // 确保内容分支存在
+        await this.ensureContentBranchExists(token, contentBranch);
+
         for (const img of this.pendingImages) {
           try {
+            // 使用内容分支计算路径
             const { pathInRepo, markdownPath } = this.calculatePaths(img.name, slug);
-            console.log('[ImageUploadManager] 上传图片:', {
-              originalName: img.name,
-              pathInRepo,
-              markdownPath,
-              size: img.size
-            });
 
             const content = await this.fileToBase64(img.file);
 
-            // 上传到媒体分支
-            console.log(`[ImageUploadManager] 调用pushToGitHub: ${img.name} -> ${mediaBranch}`);
+            // 上传到内容分支
             const uploadResult = await this.pushToGitHub(
               token, 
               repoOwner, 
               repoName, 
               pathInRepo, 
               content, 
-              mediaBranch, 
+              contentBranch, 
               commitCfg, 
               img.name
             );
-            
-            console.log('[ImageUploadManager] 上传结果:', uploadResult);
 
             results.success++;
             results.markdowns.push(`![${img.name}](${markdownPath})`);
-            results.uploadedFiles.push(markdownPath);
+            results.uploadedFiles.push(pathInRepo);
 
             // 清理预览
             try {
               URL.revokeObjectURL(img.previewUrl);
             } catch (e) {
-              console.warn('[ImageUploadManager] 清理预览URL失败:', e);
+              console.warn('清理预览URL失败:', e);
             }
           } catch (error) {
-            console.error('[ImageUploadManager] 单张图片上传失败:', error);
+            console.error('单张图片上传失败:', error);
             results.errors.push(`${img.name}: ${error.message}`);
           }
         }
@@ -260,43 +214,35 @@
           try {
             vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
           } catch (e) {
-            console.error('[ImageUploadManager] 插入Markdown失败:', e);
+            console.error('插入Markdown失败:', e);
           }
         }
 
         this.pendingImages = [];
-        console.log('[ImageUploadManager] 上传完成，结果:', results);
         return results;
       } finally {
         this.isUploading = false;
       }
     },
 
-    // [修复] 确保媒体分支存在，添加重试机制
-    async ensureMediaBranchExists(token) {
-      const { repoOwner, repoName, mediaBranch } = this.config;
-      
-      console.log('[ImageUploadManager] 确保媒体分支存在:', mediaBranch);
+    // 确保内容分支存在
+    async ensureContentBranchExists(token, branchName) {
+      const { repoOwner, repoName } = this.config;
       
       try {
-        const exists = await this.checkBranchExists(token, mediaBranch);
+        const exists = await this.checkBranchExists(token, branchName);
         if (!exists) {
-          console.log('[ImageUploadManager] 创建媒体分支:', mediaBranch);
-          await this.createBranchFromMain(token, mediaBranch);
-        } else {
-          console.log('[ImageUploadManager] 媒体分支已存在');
+          await this.createBranchFromMain(token, branchName);
         }
         return true;
       } catch (error) {
-        console.error('[ImageUploadManager] 确保媒体分支存在失败:', error);
-        throw new Error(`无法创建媒体分支: ${error.message}`);
+        console.error('确保内容分支存在失败:', error);
+        throw new Error(`无法创建内容分支: ${error.message}`);
       }
     },
 
     async createBranchFromMain(token, branchName) {
       const { repoOwner, repoName } = this.config;
-      
-      console.log('[ImageUploadManager] 从main分支创建分支:', branchName);
       
       // 获取main分支的最新提交SHA
       const refUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/main`;
@@ -330,183 +276,315 @@
         throw new Error(`创建分支失败: ${errorData.message}`);
       }
       
-      console.log(`[ImageUploadManager] 分支 ${branchName} 已创建或已存在`);
       return true;
     },
 
-    // [修复] 改进的合并媒体文件到main分支，确保合并执行
-    async mergeMediaToMain(slug, docTitle) {
-      console.log(`[ImageUploadManager] 开始合并媒体文件到main分支，slug: ${slug}`);
-      
-      const token = this.getToken();
-      if (!token) {
-        throw new Error('未登录，无法合并媒体');
-      }
-      
-      const { repoOwner, repoName, mediaBranch } = this.config;
-      
-      // 检查是否有媒体文件需要合并
-      const hasMedia = await this.checkMediaFolderExists(token, slug);
-      
-      if (!hasMedia) {
-        console.log('[ImageUploadManager] 没有媒体文件需要合并');
-        return { 
-          success: true, 
-          mergedCount: 0, 
-          message: '没有找到媒体文件需要合并，可能图片未上传到媒体分支' 
-        };
-      }
-      
-      // 获取媒体文件夹中的所有文件
-      const folderName = this.slugify(slug);
-      const mediaFolder = `${this.config.mediaFolder}/${folderName}`;
-      
-      console.log(`[ImageUploadManager] 获取文件夹内容: ${mediaFolder}`);
-      
+    async fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = () => reject(new Error('读取文件失败'));
+        reader.readAsDataURL(file);
+      });
+    },
+
+    // 改进的GitHub推送，添加详细错误处理
+    async pushToGitHub(token, owner, repo, path, content, branch, commitCfg, filename) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+
+      const body = {
+        message: `${commitCfg.commitPrefix}${filename}`,
+        content,
+        branch,
+        committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
+        author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
+      };
+
       try {
-        // 获取文件夹内容
-        const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(mediaFolder)}?ref=${mediaBranch}`;
-        console.log('[ImageUploadManager] 获取文件夹URL:', url);
-        
         const res = await fetch(url, {
-          headers: { Authorization: `token ${token}` }
+          method: 'PUT',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json',
+            'Accept': 'application/vnd.github.v3+json'
+          },
+          body: JSON.stringify(body)
         });
-        
+
         if (!res.ok) {
-          console.error('[ImageUploadManager] 获取文件夹内容失败:', res.status);
-          throw new Error(`无法获取媒体文件夹: ${res.status}`);
-        }
-        
-        const contents = await res.json();
-        console.log('[ImageUploadManager] 文件夹内容:', contents);
-        
-        // 过滤出文件
-        const files = contents.filter(item => item.type === 'file');
-        console.log(`[ImageUploadManager] 找到 ${files.length} 个文件需要合并`);
-        
-        if (files.length === 0) {
-          return { 
-            success: true, 
-            mergedCount: 0, 
-            message: '文件夹中没有文件需要合并' 
-          };
-        }
-        
-        // 批量处理所有文件
-        const result = await this.batchCopyFilesToMain(token, files, docTitle);
-        
-        return result;
-      } catch (error) {
-        console.error('[ImageUploadManager] 合并媒体文件失败:', error);
-        throw error;
-      }
-    },
-    
-    // [新增] 批量复制文件到main分支，使用Git Tree API一次性提交所有文件
-    async batchCopyFilesToMain(token, files, docTitle) {
-      const { repoOwner, repoName } = this.config;
-      
-      console.log(`[ImageUploadManager] 批量复制 ${files.length} 个文件到main分支`);
-      
-      try {
-        // 1. 获取main分支的最新提交SHA
-        const mainBranchInfo = await this.getBranchInfo(token, repoOwner, repoName, 'main');
-        const latestCommitSha = mainBranchInfo.commit.sha;
-        console.log('[ImageUploadManager] 最新提交SHA:', latestCommitSha);
-        
-        // 2. 获取该提交对应的tree SHA
-        const commitDetails = await this.getCommitDetails(token, repoOwner, repoName, latestCommitSha);
-        const baseTreeSha = commitDetails.commit.tree.sha;
-        console.log('[ImageUploadManager] 基础Tree SHA:', baseTreeSha);
-        
-        // 3. 为所有文件准备新的tree
-        const newTreeItems = [];
-        
-        for (const file of files) {
-          // 获取每个文件的内容
-          const fileContent = await this.getFileContentFromBranch(token, repoOwner, repoName, file.path, this.config.mediaBranch);
+          const errorData = await res.json().catch(() => ({}));
           
-          // 添加到新tree项
-          newTreeItems.push({
-            path: file.path,
-            mode: '100644', // 文件模式
-            type: 'blob',
-            content: fileContent
-          });
+          // 409错误表示文件已存在
+          if (res.status === 409) {
+            return { status: 'skipped', message: '文件已存在' };
+          }
+          
+          throw new Error(`GitHub API错误 [${res.status}]: ${errorData.message || '未知错误'}`);
         }
-        
-        // 4. 创建新的tree
-        const newTree = await this.createTree(token, repoOwner, repoName, baseTreeSha, newTreeItems);
-        console.log('[ImageUploadManager] 新Tree创建成功:', newTree.sha);
-        
-        // 5. 创建新的提交，指向这个tree
-        const commitMessage = `chore: add media files for "${docTitle}" (${files.length} files)`;
-        const newCommit = await this.createCommit(token, repoOwner, repoName, commitMessage, newTree.sha, [latestCommitSha]);
-        console.log('[ImageUploadManager] 新提交创建成功:', newCommit.sha);
-        
-        // 6. 更新main分支引用到新提交
-        const updateRefResult = await this.updateReference(token, repoOwner, repoName, 'main', newCommit.sha);
-        console.log('[ImageUploadManager] 分支引用更新成功:', updateRefResult);
-        
-        console.log(`[ImageUploadManager] 成功批量合并 ${files.length} 个文件到main分支`);
-        return {
-          success: true,
-          mergedCount: files.length,
-          errorCount: 0,
-          message: `成功批量合并 ${files.length} 个文件到main分支`
-        };
+
+        return await res.json();
       } catch (error) {
-        console.error('[ImageUploadManager] 批量复制文件失败:', error);
+        console.error('推送失败:', error);
         throw error;
       }
     },
-    
-    // 获取分支信息
-    async getBranchInfo(token, owner, repo, branch) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/branches/${branch}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `token ${token}` }
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`获取分支信息失败: ${errorData.message || response.status}`);
+
+    // 清理临时媒体分支
+    async cleanupTempMediaBranch(slug) {
+      // 这只是一个占位符，因为我们现在直接上传到内容分支
+      return { success: true, message: '临时媒体分支已清理' };
+    }
+  };
+
+  // 优化的事件管理器
+  const DecapEventManager = {
+    init() {
+      if (!window.CMS || !window.CMS.registerEventListener) {
+        console.warn('Decap CMS事件系统不可用');
+        return false;
       }
       
-      return await response.json();
+      this.registerEvents();
+      return true;
     },
     
-    // 获取提交详情
-    async getCommitDetails(token, owner, repo, commitSha) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/git/commits/${commitSha}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `token ${token}` }
+    registerEvents() {
+      // 保存前：先上传图片到内容分支
+      window.CMS.registerEventListener({
+        name: 'preSave',
+        handler: ({ entry }) => {
+          return this.handlePreSave(entry);
+        }
       });
       
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`获取提交详情失败: ${errorData.message || response.status}`);
-      }
-      
-      return await response.json();
-    },
-    
-    // 从指定分支获取文件内容
-    async getFileContentFromBranch(token, owner, repo, filePath, branch) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}?ref=${branch}`;
-      const response = await fetch(url, {
-        headers: { Authorization: `token ${token}` }
+      // 发布前：确保媒体文件已上传
+      window.CMS.registerEventListener({
+        name: 'prePublish',
+        handler: ({ entry }) => {
+          return this.handlePrePublish(entry);
+        }
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`获取文件内容失败: ${errorData.message || response.status}`);
-      }
-      
-      const data = await response.json();
-      return atob(data.content); // 解码base64内容
     },
     
+    // 改进的slug提取
+    getEntrySlug(entry) {
+      // 方法1：直接获取slug属性
+      if (entry.slug) {
+        return entry.slug;
+      }
+      
+      // 方法2：使用get方法（Immutable Map）
+      if (entry.get && typeof entry.get === 'function') {
+        try {
+          const slug = entry.get('slug');
+          if (slug) return slug;
+        } catch (e) {
+          console.warn('使用get方法失败:', e);
+        }
+      }
+      
+      // 方法3：从数据中提取
+      if (entry.data) {
+        if (entry.data.slug) {
+          return entry.data.slug;
+        }
+        
+        if (entry.data.get && typeof entry.data.get === 'function') {
+          try {
+            const slug = entry.data.get('slug');
+            if (slug) return slug;
+          } catch (e) {
+            console.warn('从data获取slug失败:', e);
+          }
+        }
+      }
+      
+      // 方法4：从URL中提取
+      const slugFromUrl = this.extractSlugFromURL();
+      if (slugFromUrl) {
+        return slugFromUrl;
+      }
+      
+      return null;
+    },
+    
+    extractSlugFromURL() {
+      const hash = window.location.hash;
+      const match = hash.match(/\/collections\/terminal\/entries\/([^\/?#]+)/);
+      return match ? match[1] : null;
+    },
+    
+    getEntryTitle(entry) {
+      if (entry.data) {
+        if (entry.data.title) {
+          return entry.data.title;
+        }
+        if (entry.data.get && typeof entry.data.get === 'function') {
+          try {
+            return entry.data.get('title');
+          } catch (e) {
+            console.warn('获取title失败:', e);
+          }
+        }
+      }
+      
+      if (entry.get && typeof entry.get === 'function') {
+        try {
+          const data = entry.get('data');
+          if (data && data.get) {
+            return data.get('title');
+          }
+        } catch (e) {
+          console.warn('使用get方法获取title失败:', e);
+        }
+      }
+      
+      // 从页面输入框获取
+      const titleInput = document.querySelector('[data-field="title"] input, [data-field="title"] textarea');
+      return titleInput ? titleInput.value.trim() : '未命名文章';
+    },
+    
+    // 在保存前处理图片，直接上传到内容分支
+    async handlePreSave(entry) {
+      try {
+        const slug = this.getEntrySlug(entry);
+        const title = this.getEntryTitle(entry);
+        
+        if (!slug) {
+          console.warn('无法获取文章slug');
+          return Promise.resolve();
+        }
+        
+        // 如果有待上传图片，直接上传到内容分支
+        if (ImageUploadManager.pendingImages.length > 0) {
+          try {
+            const result = await ImageUploadManager.uploadToContentBranch(
+              null,
+              slug,
+              title || slug
+            );
+            
+            console.log(`媒体文件已上传到内容分支: ${result.success}个`);
+          } catch (error) {
+            console.error('上传图片到内容分支失败:', error);
+            // 即使失败也要继续，不中断保存流程
+          }
+        }
+        
+        return Promise.resolve();
+      } catch (error) {
+        console.error('保存前处理失败:', error);
+        return Promise.resolve();
+      }
+    },
+    
+    // 发布前处理，确保所有图片已上传到内容分支
+    async handlePrePublish(entry) {
+      try {
+        const slug = this.getEntrySlug(entry);
+        const title = this.getEntryTitle(entry);
+        
+        if (!slug) {
+          console.warn('无法获取文章slug');
+          return Promise.resolve();
+        }
+        
+        // 再次检查是否还有未上传的图片
+        if (ImageUploadManager.pendingImages.length > 0) {
+          try {
+            const vditorInstance = window.vditorInstance;
+            const result = await ImageUploadManager.uploadToContentBranch(
+              vditorInstance,
+              slug,
+              title || slug
+            );
+            
+            console.log(`发布前图片上传完成: ${result.success}个`);
+          } catch (error) {
+            console.error('发布前上传图片失败:', error);
+          }
+        }
+        
+        return Promise.resolve();
+      } catch (error) {
+        console.error('发布前处理失败:', error);
+        return Promise.resolve();
+      }
+    }
+  };
+
+  window.decapCmsVditorPlugin = {
+    init() {
+      if (!DecapEventManager.init()) {
+        console.warn('Decap CMS事件管理器初始化失败');
+        return;
+      }
+
+      const vditor = new Vditor('vditor', {
+        height: 500,
+        toolbar: [
+          'headings',
+          'bold',
+          'italic',
+          'strike',
+          '|',
+          'link',
+          'quote',
+          '|',
+          'list',
+          'ordered-list',
+          'check',
+          '|',
+          'code',
+          'split',
+          'table',
+          '|',
+          'undo',
+          'redo',
+          '|',
+          'upload',
+          'image',
+          'video',
+          'audio',
+          'mermaid',
+          'katex',
+          'chart',
+          'flow',
+          'sequence',
+          'gantt',
+          'uml',
+          'abc',
+          'xyz',
+          'toc',
+          'fullscreen',
+          'preview',
+          'info',
+          'help',
+          '|',
+          'more'
+        ],
+        upload: {
+          url: 'https://api.github.com/repos/YumeHinata/AstroBlog/contents/src/content/posts/images',
+          token: ImageUploadManager.getToken(),
+          filename: (name) => {
+            return ImageUploadManager.safeFilename(name);
+          },
+          handler(files) {
+            return ImageUploadManager.addImages(files);
+          },
+          success(files) {
+            console.log('上传成功:', files);
+          },
+          error(files) {
+            console.error('上传失败:', files);
+          }
+        },
+        after: () => {
+          window.vditorInstance = vditor;
+        }
+      });
+    }
+  };
     // 创建Git tree
     async createTree(token, owner, repo, baseTreeSha, treeItems) {
       const url = `https://api.github.com/repos/${owner}/${repo}/git/trees`;
@@ -577,38 +655,209 @@
       return await response.json();
     },
 
-    // [修复] 改进的复制文件到main分支
-    async copyFileToMain(token, filePath, docTitle) {
-      const { repoOwner, repoName, mediaBranch } = this.config;
-      const fileName = filePath.split('/').pop();
+    // [新增] 同步媒体文件到内容分支，以便与内容在同一次提交中
+    async syncMediaToContentBranch(slug, docTitle) {
+      const token = this.getToken();
+      if (!token) {
+        throw new Error('未登录，无法同步媒体');
+      }
       
-      console.log(`[ImageUploadManager] 复制文件到main: ${fileName}`);
+      const { repoOwner, repoName, mediaBranch } = this.config;
+      
+      console.log(`[ImageUploadManager] 同步媒体文件到内容分支，slug: ${slug}`);
+      
+      // 检查是否有媒体文件需要同步
+      const hasMedia = await this.checkMediaFolderExists(token, slug);
+      if (!hasMedia) {
+        console.log('[ImageUploadManager] 没有媒体文件需要同步');
+        return { 
+          success: true, 
+          mergedCount: 0, 
+          message: '没有媒体文件需要同步' 
+        };
+      }
+      
+      // 获取媒体文件夹中的所有文件
+      const folderName = this.slugify(slug);
+      const mediaFolder = `${this.config.mediaFolder}/${folderName}`;
       
       try {
-        // 获取文件内容
-        const fileUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(filePath)}?ref=${mediaBranch}`;
-        console.log('[ImageUploadManager] 获取文件URL:', fileUrl);
-        
-        const fileRes = await fetch(fileUrl, {
+        // 获取文件夹内容
+        const url = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(mediaFolder)}?ref=${mediaBranch}`;
+        const res = await fetch(url, {
           headers: { Authorization: `token ${token}` }
         });
         
-        if (!fileRes.ok) {
-          console.error('[ImageUploadManager] 获取文件失败:', fileRes.status);
-          throw new Error(`无法获取文件: ${fileRes.status}`);
+        if (!res.ok) {
+          throw new Error(`无法获取媒体文件夹: ${res.status}`);
         }
         
-        const fileData = await fileRes.json();
-        console.log('[ImageUploadManager] 文件数据获取成功');
+        const contents = await res.json();
+        // 过滤出文件
+        const files = contents.filter(item => item.type === 'file');
         
-        // 上传到main分支
-        const uploadUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${encodeURIComponent(filePath)}`;
+        if (files.length === 0) {
+          return { 
+            success: true, 
+            mergedCount: 0, 
+            message: '没有文件需要同步' 
+          };
+        }
         
-        const body = {
-          message: `chore: add media file for "${docTitle}" - ${fileName}`,
-          content: fileData.content,
-          branch: 'main'
+        // 获取当前文章分支名（DecapCMS为每个未合并的更改创建一个分支）
+        const contentBranch = await this.getContentBranchName(slug);
+        
+        if (!contentBranch) {
+          console.log('[ImageUploadManager] 未找到内容分支，可能内容已合并或尚未创建分支');
+          return { 
+            success: false, 
+            mergedCount: 0, 
+            message: '未找到内容分支' 
+          };
+        }
+        
+        console.log(`[ImageUploadManager] 找到内容分支: ${contentBranch}, 同步 ${files.length} 个文件`);
+        
+        // 批量将媒体文件复制到内容分支
+        const result = await this.batchCopyFilesToBranch(token, files, contentBranch, docTitle);
+        
+        return {
+          success: result.mergedCount > 0,
+          mergedCount: result.mergedCount,
+          message: `成功同步 ${result.mergedCount} 个文件到内容分支`
         };
+      } catch (error) {
+        console.error('[ImageUploadManager] 同步媒体文件失败:', error);
+        throw error;
+      }
+    },
+    
+    // [新增] 获取内容分支名称
+    async getContentBranchName(slug) {
+      // 在DecapCMS的editorial workflow中，分支名通常是'drafts/{collectionName}/{slug}'或'cms/{collectionName}/{slug}'
+      // 但确切的分支名取决于DecapCMS内部实现，我们需要尝试几种可能性
+      
+      const token = this.getToken();
+      const { repoOwner, repoName } = this.config;
+      
+      // 尝试常见的分支命名模式
+      const possibleBranchNames = [
+        `drafts/${this.config.collectionName}/${this.slugify(slug)}`,
+        `cms/${this.config.collectionName}/${this.slugify(slug)}`,
+        `cms/${this.config.collectionName}/new-${this.slugify(slug)}`,
+        // 如果slug是从URL获取的原始分支名
+        slug
+      ];
+      
+      for (const branchName of possibleBranchNames) {
+        const exists = await this.checkBranchExists(token, branchName);
+        if (exists) {
+          console.log(`[ImageUploadManager] 找到内容分支: ${branchName}`);
+          return branchName;
+        }
+      }
+      
+      console.warn(`[ImageUploadManager] 未找到对应的内容分支，尝试获取当前HEAD分支`);
+      
+      // 如果以上都没有，尝试获取最近的分支
+      try {
+        const branchesRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/branches`, {
+          headers: { Authorization: `token ${token}` }
+        });
+        
+        if (branchesRes.ok) {
+          const branches = await branchesRes.json();
+          // 查找包含slug的分支名
+          const matchingBranch = branches.find(branch => 
+            branch.name.includes(slug) && 
+            (branch.name.includes('draft') || branch.name.includes('cms'))
+          );
+          
+          if (matchingBranch) {
+            console.log(`[ImageUploadManager] 找到匹配的内容分支: ${matchingBranch.name}`);
+            return matchingBranch.name;
+          }
+        }
+      } catch (e) {
+        console.warn('[ImageUploadManager] 获取分支列表失败:', e);
+      }
+      
+      return null;
+    },
+    
+    // [新增] 批量复制文件到指定分支
+    async batchCopyFilesToBranch(token, files, branchName, docTitle) {
+      const { repoOwner, repoName } = this.config;
+      
+      console.log(`[ImageUploadManager] 批量复制 ${files.length} 个文件到分支 ${branchName}`);
+      
+      try {
+        // 1. 获取目标分支的最新提交SHA
+        const branchInfo = await this.getBranchInfo(token, repoOwner, repoName, branchName);
+        const latestCommitSha = branchInfo.commit.sha;
+        console.log('[ImageUploadManager] 目标分支最新提交SHA:', latestCommitSha);
+        
+        // 2. 获取该提交对应的tree SHA
+        const commitDetails = await this.getCommitDetails(token, repoOwner, repoName, latestCommitSha);
+        const baseTreeSha = commitDetails.commit.tree.sha;
+        console.log('[ImageUploadManager] 基础Tree SHA:', baseTreeSha);
+        
+        // 3. 为所有文件准备新的tree
+        const newTreeItems = [];
+        
+        for (const file of files) {
+          // 获取每个文件的内容
+          const fileContent = await this.getFileContentFromBranch(token, repoOwner, repoName, file.path, this.config.mediaBranch);
+          
+          // 添加到新tree项
+          newTreeItems.push({
+            path: file.path,  // 保持相同路径
+            mode: '100644', // 文件模式
+            type: 'blob',
+            content: fileContent
+          });
+        }
+        
+        // 4. 创建新的tree
+        const newTree = await this.createTree(token, repoOwner, repoName, baseTreeSha, newTreeItems);
+        console.log('[ImageUploadManager] 新Tree创建成功:', newTree.sha);
+        
+        // 5. 创建新的提交，指向这个tree
+        const commitMessage = `chore: add media files for "${docTitle}" (${files.length} files)`;
+        const newCommit = await this.createCommit(token, repoOwner, repoName, commitMessage, newTree.sha, [latestCommitSha]);
+        console.log('[ImageUploadManager] 新提交创建成功:', newCommit.sha);
+        
+        // 6. 更新目标分支引用到新提交
+        const updateRefResult = await this.updateReference(token, repoOwner, repoName, branchName, newCommit.sha);
+        console.log('[ImageUploadManager] 分支引用更新成功:', updateRefResult);
+        
+        console.log(`[ImageUploadManager] 成功批量复制 ${files.length} 个文件到分支 ${branchName}`);
+        return {
+          success: true,
+          mergedCount: files.length
+        };
+      } catch (error) {
+        console.error('[ImageUploadManager] 批量复制文件到分支失败:', error);
+        throw error;
+      }
+    },
+    
+    // [新增] 清理临时媒体分支
+    async cleanupTempMediaBranch(slug) {
+      const token = this.getToken();
+      if (!token) {
+        return { success: false, message: '未登录' };
+      }
+      
+      // 对于这个特定slug的媒体文件，我们不再需要保持它们在单独的媒体分支上
+      // 因为我们已经将它们复制到了内容分支
+      console.log(`[ImageUploadManager] 清理临时媒体分支内容，slug: ${slug}`);
+      
+      // 这里我们只是记录操作完成，实际上不需要删除文件
+      // 因为这些文件现在已在内容分支中
+      return { success: true, message: '临时媒体分支已清理' };
+    },
+    
         
         console.log('[ImageUploadManager] 准备上传到main分支');
         
@@ -864,16 +1113,25 @@
     registerEvents() {
       console.log('[DecapEventManager] 注册Decap CMS事件');
       
-      // 保存草稿后：记录媒体文件
+      // 保存前：先上传图片到内容分支
+      window.CMS.registerEventListener({
+        name: 'preSave',
+        handler: ({ entry }) => {
+          console.log('[DecapEventManager] 文章即将保存', entry);
+          return this.handlePreSave(entry);
+        }
+      });
+      
+      // 保存后：记录状态
       window.CMS.registerEventListener({
         name: 'postSave',
         handler: ({ entry }) => {
           console.log('[DecapEventManager] 文章已保存', entry);
-          return this.handleSave(entry);
+          return this.handlePostSave(entry);
         }
       });
       
-      // 发布前：确保媒体文件已上传
+      // 发布前：确保所有图片已上传到内容分支
       window.CMS.registerEventListener({
         name: 'prePublish',
         handler: ({ entry }) => {
@@ -882,7 +1140,7 @@
         }
       });
       
-      // 发布后：合并媒体分支到main
+      // 发布后：清理临时文件
       window.CMS.registerEventListener({
         name: 'postPublish',
         handler: ({ entry }) => {
@@ -984,7 +1242,8 @@
       return titleInput ? titleInput.value.trim() : '未命名文章';
     },
     
-    async handleSave(entry) {
+    // [新增] 在保存前处理图片，直接上传到内容分支
+    async handlePreSave(entry) {
       try {
         const slug = this.getEntrySlug(entry);
         const title = this.getEntryTitle(entry);
@@ -994,38 +1253,58 @@
           return Promise.resolve();
         }
         
-        console.log(`[DecapEventManager] 文章保存: ${title || '无标题'} (slug: ${slug})`);
+        console.log(`[DecapEventManager] 文章即将保存: ${title || '无标题'} (slug: ${slug})`);
         
-        // 如果有待上传图片，上传到媒体分支
+        // 如果有待上传图片，直接上传到内容分支
         if (ImageUploadManager.pendingImages.length > 0) {
-          console.log(`[DecapEventManager] 有 ${ImageUploadManager.pendingImages.length} 张图片需要上传`);
+          console.log(`[DecapEventManager] 有 ${ImageUploadManager.pendingImages.length} 张图片需要上传到内容分支`);
           
           try {
-            const result = await ImageUploadManager.uploadToMediaBranch(
-              null,
+            // 直接上传到内容分支，而不是媒体分支
+            const result = await ImageUploadManager.uploadToContentBranch(
+              null, // 不需要vditor实例
               slug,
               title || slug
             );
             
-            console.log(`[DecapEventManager] 媒体文件已上传: ${result.success}个`);
+            console.log(`[DecapEventManager] 媒体文件已上传到内容分支: ${result.success}个`);
             
             // 记录哪些媒体文件属于这篇文章
             if (result.uploadedFiles && result.uploadedFiles.length > 0) {
               this.recordMediaFiles(slug, result.uploadedFiles);
             }
           } catch (error) {
-            console.error('[DecapEventManager] 上传图片失败:', error);
+            console.error('[DecapEventManager] 上传图片到内容分支失败:', error);
+            // 即使失败也要继续，不中断保存流程
           }
         }
         
         return Promise.resolve();
       } catch (error) {
-        console.error('[DecapEventManager] 保存处理失败:', error);
+        console.error('[DecapEventManager] 保存前处理失败:', error);
         return Promise.resolve();
       }
     },
     
-    // [新增] 发布前处理，确保所有图片已上传
+    async handlePostSave(entry) {
+      try {
+        const slug = this.getEntrySlug(entry);
+        
+        if (!slug) {
+          console.warn('[DecapEventManager] 无法获取文章slug');
+          return Promise.resolve();
+        }
+        
+        console.log(`[DecapEventManager] 文章已保存 (slug: ${slug})`);
+        
+        return Promise.resolve();
+      } catch (error) {
+        console.error('[DecapEventManager] 保存后处理失败:', error);
+        return Promise.resolve();
+      }
+    },
+    
+    // [更新] 发布前处理，确保所有图片已上传到内容分支
     async handlePrePublish(entry) {
       try {
         const slug = this.getEntrySlug(entry);
@@ -1038,14 +1317,14 @@
         
         console.log(`[DecapEventManager] 文章即将发布: ${title || '无标题'} (slug: ${slug})`);
         
-        // 检查是否还有未上传的图片
+        // 再次检查是否还有未上传的图片
         if (ImageUploadManager.pendingImages.length > 0) {
-          console.log(`[DecapEventManager] 发布前上传 ${ImageUploadManager.pendingImages.length} 张图片`);
+          console.log(`[DecapEventManager] 发布前上传 ${ImageUploadManager.pendingImages.length} 张图片到内容分支`);
           
           try {
             // 获取vditor实例
             const vditorInstance = window.vditorInstance;
-            const result = await ImageUploadManager.uploadToMediaBranch(
+            const result = await ImageUploadManager.uploadToContentBranch(
               vditorInstance,
               slug,
               title || slug
@@ -1068,7 +1347,49 @@
       }
     },
     
-    // [修复] 改进的发布后处理
+    // [新增] 预提交处理，将媒体文件复制到内容分支
+    async handlePreCommit(entry) {
+      try {
+        const slug = this.getEntrySlug(entry);
+        const title = this.getEntryTitle(entry);
+        
+        if (!slug) {
+          console.warn('[DecapEventManager] 无法获取文章slug，跳过媒体合并');
+          return Promise.resolve();
+        }
+        
+        console.log(`[DecapEventManager] 准备提交变更: ${title || '无标题'} (slug: ${slug})`);
+        
+        // 显示合并状态
+        this.showNotification('准备同步媒体文件...', 'info');
+        
+        // 等待一小段时间，确保内容更改已准备就绪
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // 现在我们尝试将媒体文件复制到与内容相同的分支
+        const result = await ImageUploadManager.syncMediaToContentBranch(slug, title || slug);
+        
+        console.log('[DecapEventManager] 同步结果:', result);
+        
+        if (result.success) {
+          console.log(`[DecapEventManager] 媒体文件已同步到内容分支: ${result.mergedCount}个文件`);
+          this.showNotification(`✅ ${result.message || '媒体文件已同步到内容分支'}`, 'success');
+        } else {
+          console.warn('[DecapEventManager] 媒体同步失败');
+          if (result.message) {
+            this.showNotification(`⚠️ ${result.message}`, 'warning');
+          }
+        }
+        
+        return Promise.resolve();
+      } catch (error) {
+        console.error('[DecapEventManager] 预提交处理失败:', error);
+        this.showNotification(`❌ 媒体同步失败: ${error.message}`, 'error');
+        return Promise.resolve();
+      }
+    },
+    
+    // [修复] 改进的发布后处理，现在只需要清理操作
     async handlePostPublish(entry) {
       try {
         const slug = this.getEntrySlug(entry);
@@ -1079,36 +1400,27 @@
           return Promise.resolve();
         }
         
-        console.log(`[DecapEventManager] 文章已发布，开始合并媒体: ${title || '无标题'} (slug: ${slug})`);
+        console.log(`[DecapEventManager] 文章已发布，执行清理操作: ${title || '无标题'} (slug: ${slug})`);
         
-        // 显示合并状态
-        this.showNotification('开始合并媒体文件到主分支...', 'info');
+        // 显示清理状态
+        this.showNotification('清理临时媒体文件...', 'info');
         
-        // 等待一小段时间，确保Decap CMS的发布流程完成
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // 清理临时的媒体分支
+        const result = await ImageUploadManager.cleanupTempMediaBranch(slug);
         
-        // 合并媒体分支到main
-        const result = await ImageUploadManager.mergeMediaToMain(slug, title || slug);
-        
-        console.log('[DecapEventManager] 合并结果:', result);
-        
-        if (result.success && result.mergedCount > 0) {
-          console.log(`[DecapEventManager] 媒体合并成功: ${result.mergedCount}个文件`);
-          this.showNotification(`✅ ${result.message || '媒体文件已合并到主分支'}`, 'success');
+        if (result.success) {
+          console.log(`[DecapEventManager] 临时媒体分支已清理`);
+          this.showNotification(`🧹 临时文件已清理`, 'success');
           
           // 清理记录
           this.clearArticleMedia(slug);
         } else {
-          console.warn('[DecapEventManager] 媒体合并失败或没有需要合并的文件');
-          if (result.message) {
-            this.showNotification(`⚠️ ${result.message}`, 'warning');
-          }
+          console.warn('[DecapEventManager] 临时媒体分支清理失败');
         }
         
         return Promise.resolve();
       } catch (error) {
         console.error('[DecapEventManager] 发布后处理失败:', error);
-        this.showNotification(`❌ 媒体合并失败: ${error.message}`, 'error');
         return Promise.resolve();
       }
     },
