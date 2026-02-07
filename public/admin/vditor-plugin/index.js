@@ -86,13 +86,12 @@
         throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
       }
       
-      const timestamp = Date.now();
-      const randomSuffix = Math.floor(Math.random() * 1000);
-      const safeFilename = `${timestamp}-${randomSuffix}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      // 保持原始文件名，不添加时间戳
+      const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
       
       // 在post目录下创建以slug命名的子目录存放图片
-      const pathInRepo = `${mediaFolder}/${slug}/images/${safeFilename}`;
-      const markdownPath = `./images/${safeFilename}`;
+      const pathInRepo = `${mediaFolder}/${slug}/images/${slug}/${safeFilename}`;
+      const markdownPath = `./images/${slug}/${safeFilename}`;
       return { pathInRepo, markdownPath };
     },
 
@@ -251,7 +250,8 @@
     // 获取CDN预览URL
     getCdnUrl(slug, filename) {
       // 使用jsDelivr CDN来预览GitHub上的图片
-      return `https://cdn.jsdelivr.net/gh/${this.config.repoOwner}/${this.config.repoName}@${this.config.mediaBranch}/${this.config.mediaFolder}/${slug}/images/${filename}`;
+      // 注意路径结构: repoOwner/repoName@branch/mediaFolder/slug/images/slug/filename
+      return `https://cdn.jsdelivr.net/gh/${this.config.repoOwner}/${this.config.repoName}@${this.config.mediaBranch}/${this.config.mediaFolder}/${slug}/images/${slug}/${filename}`;
     },
 
     // 获取当前内容所在分支
@@ -496,11 +496,30 @@
                   if (img.src.startsWith('./images/')) {
                     // 从当前文档路径提取slug
                     const currentPath = this.getCurrentDocPath();
-                    const match = currentPath.match(/\/([^\/]+)\.md$/);
-                    if (match) {
-                      const slug = decodeURIComponent(match[1]);
-                      const filename = img.src.substring('./images/'.length);
-                      img.src = ImageUploadManager.getCdnUrl(slug, filename);
+                    
+                    // 从文档路径中提取slug，例如从 src/content/posts/test-post.md 中提取 test-post
+                    let slug = null;
+                    if (currentPath && currentPath.includes('/')) {
+                      const pathParts = currentPath.split('/');
+                      
+                      // 如果是形如 src/content/posts/[slug].md 的路径
+                      if (pathParts.length >= 4 && pathParts[pathParts.length - 1].endsWith('.md')) {
+                        slug = pathParts[pathParts.length - 1].slice(0, -3); // 移除 .md 后缀
+                      }
+                    }
+                    
+                    if (slug) {
+                      // 从图片路径中提取文件名部分
+                      const imageMatch = img.src.match(/^\.\/images\/([^\/]+)\/(.+)$/);
+                      if (imageMatch) {
+                        const imgSlug = imageMatch[1];  // 从路径中提取的slug部分
+                        const filename = imageMatch[2]; // 文件名部分
+                        img.src = ImageUploadManager.getCdnUrl(imgSlug, filename);
+                      } else {
+                        // 如果路径格式不匹配，尝试直接处理
+                        const filename = img.src.substring('./images/'.length);
+                        img.src = ImageUploadManager.getCdnUrl(slug, filename);
+                      }
                     }
                   }
                 });
@@ -891,7 +910,7 @@
       }
 
       window.decapCmsVditorPlugin = {
-        version: '4.4',
+        version: '4.5',
         hasUpload: true,
         manager: ImageUploadManager
       };
