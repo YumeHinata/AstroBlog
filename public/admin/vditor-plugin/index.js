@@ -1,3 +1,4 @@
+index.js
 (function () {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
@@ -115,12 +116,15 @@
 
     // 准备上传所有图片并返回markdown字符串，但暂不提交
     async prepareUploadAll() {
+      console.log("准备上传图片，总数:", this.pendingImages.length); // 调试日志
       if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
 
       // 在开始上传前验证能否获取到slug
       try {
         this.calculatePaths('test.jpg'); // 只是为了验证能否成功计算路径
+        console.log("路径计算成功"); // 调试日志
       } catch(error) {
+        console.error("路径计算失败:", error); // 调试日志
         throw new Error(error.message);
       }
 
@@ -133,6 +137,7 @@
 
       for (const img of this.pendingImages) {
         try {
+          console.log("处理图片:", img.name); // 调试日志
           const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
           // 不检查文件是否存在，直接准备上传
@@ -151,6 +156,7 @@
           
           this.uploadedButUncommitted.add(pathInRepo);
         } catch (error) {
+          console.error("处理图片出错:", img.name, error); // 调试日志
           results.errors.push(`${img.name}: ${error.message}`);
         }
       }
@@ -159,6 +165,7 @@
       pendingMediaFiles.push(...results.mediaFiles);
       
       this.pendingImages = [];
+      console.log("上传准备完成，待提交文件数:", results.mediaFiles.length); // 调试日志
       return results;
     },
 
@@ -379,6 +386,8 @@
 
     async handleUpload() {
       const pendingCount = ImageUploadManager.pendingImages.length;
+      console.log("待上传图片数量:", pendingCount); // 调试日志
+      
       if (pendingCount === 0) {
         this.setState({ uploadStatus: '请先选择图片' });
         return;
@@ -390,7 +399,9 @@
       });
 
       try {
+        console.log("开始准备上传..."); // 调试日志
         const result = await ImageUploadManager.prepareUploadAll();
+        console.log("上传准备结果:", result); // 调试日志
 
         if (result.success > 0) {
           this.setState({
@@ -408,7 +419,7 @@
           console.error('上传错误:', result.errors);
         }
       } catch (error) {
-        console.error('上传过程出错:', error);
+        console.error('上传过程出错:', error); // 输出完整的错误信息
         this.setState({
           uploadStatus: `错误: ${error.message}`,
           showUploadPanel: true
