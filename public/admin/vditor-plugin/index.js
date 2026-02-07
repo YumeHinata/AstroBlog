@@ -13,7 +13,8 @@
       repoOwner: 'YumeHinata',
       repoName: 'AstroBlog',
       branch: 'main',
-      mediaFolder: 'src/content/posts'
+      mediaFolder: 'src/content/posts',
+      mediaBranch: 'cms/media-assets'  // 添加媒体分支配置
     },
 
     commitConfig: {
@@ -130,7 +131,7 @@
       }
 
       const token = this.getToken();
-      const { repoOwner, repoName, mediaBranch } = this.config; // 使用媒体分支
+      const { repoOwner, repoName, mediaBranch = 'cms/media-assets' } = this.config; // 设置默认值
       const commitCfg = this.commitConfig;
 
       const results = { success: 0, errors: [], markdowns: [] };
