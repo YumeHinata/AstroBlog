@@ -89,8 +89,8 @@
       // 保持原始文件名，不添加时间戳
       const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
       
-      // 在post目录下创建以slug命名的子目录存放图片
-      const pathInRepo = `${mediaFolder}/${slug}/images/${slug}/${safeFilename}`;
+      // 在post目录下的images子目录中创建以slug命名的子目录存放图片
+      const pathInRepo = `${mediaFolder}/images/${slug}/${safeFilename}`;
       const markdownPath = `./images/${slug}/${safeFilename}`;
       return { pathInRepo, markdownPath };
     },
@@ -163,8 +163,14 @@
           }
         }
 
-        if (results.markdowns.length > 0 && vditorInstance) {
+        // 即使有部分失败，也将成功上传的图片插入到编辑器中
+        if (results.success > 0 && results.markdowns.length > 0 && vditorInstance) {
           vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
+        }
+
+        if (results.errors.length > 0) {
+          console.error('以下图片上传失败:', results.errors);
+          alert(`部分图片上传失败:\n${results.errors.join('\n')}\n\n但已成功上传的图片已插入编辑器。`);
         }
 
         this.pendingImages = [];
@@ -247,12 +253,6 @@
       }
     },
 
-    // 获取CDN预览URL
-    getCdnUrl(slug, filename) {
-      // 使用jsDelivr CDN来预览GitHub上的图片
-      // 注意路径结构: repoOwner/repoName@branch/mediaFolder/slug/images/slug/filename
-      return `https://cdn.jsdelivr.net/gh/${this.config.repoOwner}/${this.config.repoName}@${this.config.mediaBranch}/${this.config.mediaFolder}/${slug}/images/${slug}/${filename}`;
-    },
 
     // 获取当前内容所在分支
     getCurrentContentBranch() {
