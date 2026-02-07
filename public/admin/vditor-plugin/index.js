@@ -303,39 +303,7 @@
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
       
-      // 使用Decap CMS的官方事件监听器来检测发布事件
-      if (window.CMS) {
-        // 只监听发布事件，不监听保存事件
-        try {
-          // 监听发布事件
-          window.CMS.registerEventListener({
-            name: 'prePublish',
-            handler: async (obj) => {
-              console.log('检测到prePublish事件，即将发布文章');
-              // 发布前合并媒体分支
-              await this.mergeMediaBranch();
-            }
-          });
-          
-          // 也监听进入审核流程的事件，这通常意味着发布
-          window.CMS.registerEventListener({
-            name: 'preUpdateUnpublishedEntry',
-            handler: async (obj) => {
-              // 检查是否是发布操作（从草稿状态变为发布状态）
-              if(obj.action === 'publish' || obj.action === 'changeStatus') {
-                console.log('检测到发布状态变更事件，即将发布文章');
-                // 发布前合并媒体分支
-                await this.mergeMediaBranch();
-              }
-            }
-          });
-        } catch (e) {
-          console.error('注册事件监听器失败:', e);
-          // 如果上面的方式不行，退回到监听路由变化的方式
-          this.handleRouteChange = this.handleRouteChange.bind(this);
-          window.addEventListener('hashchange', this.handleRouteChange, false);
-        }
-      }
+      // 我们现在使用beforeSubmit钩子处理合并，不再需要额外的事件监听器
     },
     
     // 合并媒体分支到主分支的方法
@@ -480,9 +448,6 @@
     componentWillUnmount() {
       // 清除定时器
       clearInterval(this.pathCheckInterval);
-      
-      // 如果使用了hashchange监听，则移除
-      window.removeEventListener('hashchange', this.handleRouteChange);
       
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
@@ -937,7 +902,6 @@
             
             // 合并成功后删除媒体分支
             try {
-              // 使用同样的方法来删除分支
               const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
               
               const deleteRes = await fetch(deleteUrl, {
@@ -1018,11 +982,10 @@
             }
           }
           
-          // 注意：这里不再合并分支，因为我们只想在发布时合并
-          // 如果有待上传的图片，合并媒体分支
-          // if (ImageUploadManager.uploadedButUncommitted.size > 0) {
-          //   await window.mergeMediaBranch();
-          // }
+          // 在提交时合并媒体分支（这是在发布或保存时都会触发）
+          if (ImageUploadManager.uploadedButUncommitted.size > 0) {
+            await window.mergeMediaBranch();
+          }
         }
       };
       
@@ -1033,6 +996,15 @@
         window.CMS_EVENTS.beforeSubmit = widget.beforeSubmit;
       } else {
         window.CMS_EVENTS = { beforeSubmit: widget.beforeSubmit };
+      }
+
+      // 注册发布事件监听器，只在正式发布时合并媒体分支
+      if (window.CMS && window.CMS_EVENTS) {
+        window.CMS_EVENTS.on('PRE_PUBLISH_ENTRY', async (payload) => {
+          console.log('检测到PRE_PUBLISH_ENTRY事件，即将发布文章');
+          // 发布前合并媒体分支
+          await window.mergeMediaBranch();
+        });
       }
 
       window.decapCmsVditorPlugin = {
