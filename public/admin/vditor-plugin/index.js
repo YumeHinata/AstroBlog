@@ -137,7 +137,7 @@
 
       try {
         // 确保媒体分支存在
-        await this.ensureMediaBranch(token, repoOwner, repoName, mediaBranch);
+        await this.ensureMediaBranchExists(token, repoOwner, repoName, mediaBranch);
 
         for (const img of this.pendingImages) {
           try {
@@ -243,6 +243,61 @@
       return await res.json();
     },
 
+    // 确保媒体分支存在，如果不存在则从主分支创建
+    async ensureMediaBranchExists(token, repoOwner, repoName, mediaBranch) {
+      // 检查媒体分支是否存在
+      const branchCheckUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/branches/${mediaBranch}`;
+      const branchCheckRes = await fetch(branchCheckUrl, {
+        headers: { Authorization: `token ${token}` }
+      });
+
+      if (branchCheckRes.ok) {
+        // 分支已存在
+        console.log(`分支已存在: ${mediaBranch}`);
+        return;
+      } else if (branchCheckRes.status === 404) {
+        // 分支不存在，需要创建
+        console.log(`分支不存在，正在创建: ${mediaBranch}`);
+
+        // 获取主分支信息
+        const mainBranchName = this.config.branch;
+        const mainBranchUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mainBranchName}`;
+        const mainBranchRes = await fetch(mainBranchUrl, {
+          headers: { Authorization: `token ${token}` }
+        });
+
+        if (!mainBranchRes.ok) {
+          throw new Error(`无法获取主分支信息: ${mainBranchRes.status}`);
+        }
+
+        const mainBranchData = await mainBranchRes.json();
+        const mainBranchSha = mainBranchData.object.sha;
+
+        // 创建媒体分支
+        const createBranchUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs`;
+        const createRes = await fetch(createBranchUrl, {
+          method: 'POST',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            ref: `refs/heads/${mediaBranch}`,
+            sha: mainBranchSha
+          })
+        });
+
+        if (!createRes.ok) {
+          const errorData = await createRes.text();
+          throw new Error(`创建分支失败: ${createRes.status}, ${errorData}`);
+        }
+
+        console.log(`成功创建分支: ${mediaBranch}`);
+      } else {
+        const errorData = await branchCheckRes.text();
+        throw new Error(`检查分支状态失败: ${branchCheckRes.status}, ${errorData}`);
+      }
+    },
 
     // 获取当前内容所在分支
     getCurrentContentBranch() {
