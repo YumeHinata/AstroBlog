@@ -86,12 +86,14 @@
         throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
       }
       
-      // 保持原始文件名，不添加时间戳
-      const safeFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
+      // 清理文件名，只保留字母、数字、点、连字符和下划线
+      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
+      // 确保slug也只包含安全字符
+      const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, '_');
       
       // 在post目录下的images子目录中创建以slug命名的子目录存放图片
-      const pathInRepo = `${mediaFolder}/images/${slug}/${safeFilename}`;
-      const markdownPath = `./images/${slug}/${safeFilename}`;
+      const pathInRepo = `${mediaFolder}/images/${safeSlug}/${safeFilename}`;
+      const markdownPath = `./images/${safeSlug}/${safeFilename}`;
       return { pathInRepo, markdownPath };
     },
 
@@ -144,7 +146,7 @@
             console.log("处理图片:", img.name); // 调试日志
             const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
-            // 不检查文件是否存在，直接上传
+            // 直接上传，不检查文件是否存在
             const content = await this.fileToBase64(img.file);
 
             // 上传到媒体分支
@@ -171,6 +173,8 @@
         if (results.errors.length > 0) {
           console.error('以下图片上传失败:', results.errors);
           alert(`部分图片上传失败:\n${results.errors.join('\n')}\n\n但已成功上传的图片已插入编辑器。`);
+        } else if(results.success > 0){
+          alert(`✅ 成功上传 ${results.success} 张图片到媒体库`);
         }
 
         this.pendingImages = [];
@@ -222,13 +226,12 @@
 
     // 提交单个媒体文件到GitHub
     async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
-      // 对路径进行URL编码以用于API请求
-      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      // 使用原始路径，让fetch自动处理编码
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const body = {
         message: `${commitCfg.commitPrefix}${filename}`,
-        content,
-        branch,
+        content: content, // 确保内容是base64编码的
+        branch: branch,
         committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
         author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
       };
@@ -249,8 +252,15 @@
 
       if (!res.ok) {
         const errorData = await res.text();
+        console.error(`GitHub API错误详情: ${errorData}`);
+        console.error(`请求URL: ${url}`);
+        console.error(`路径原始值: ${path}`);
+        console.error(`请求体: ${JSON.stringify({message: body.message, contentLength: content.length, branch: body.branch}, null, 2)}`);
         throw new Error(`GitHub API错误: ${res.status}, ${errorData}`);
       }
+      
+      // 成功上传后返回数据
+      return await res.json();
     },
 
 
@@ -429,13 +439,12 @@
     
     // 提交单个媒体文件
     async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
-      // 对路径进行URL编码以用于API请求
-      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      // 使用原始路径，让fetch自动处理编码
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const body = {
         message: `${commitCfg.commitPrefix}${filename}`,
         content,
-        branch,
+        branch: branch,
         committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
         author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
       };
@@ -456,8 +465,15 @@
 
       if (!res.ok) {
         const errorData = await res.text();
+        console.error(`GitHub API错误详情: ${errorData}`);
+        console.error(`请求URL: ${url}`);
+        console.error(`路径原始值: ${path}`);
+        console.error(`请求体: ${JSON.stringify({message: body.message, contentLength: content.length, branch: body.branch}, null, 2)}`);
         throw new Error(`GitHub API错误: ${res.status}, ${errorData}`);
       }
+      
+      // 成功上传后返回数据
+      return await res.json();
     },
 
     componentWillUnmount() {
