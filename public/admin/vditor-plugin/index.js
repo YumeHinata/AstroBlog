@@ -248,6 +248,12 @@
       }
     },
 
+    // 获取CDN预览URL
+    getCdnUrl(slug, filename) {
+      // 使用jsDelivr CDN来预览GitHub上的图片
+      return `https://cdn.jsdelivr.net/gh/${this.config.repoOwner}/${this.config.repoName}@${this.config.mediaBranch}/${this.config.mediaFolder}/${slug}/images/${filename}`;
+    },
+
     // 获取当前内容所在分支
     getCurrentContentBranch() {
       if (window.CMS?.localBackend) {
@@ -465,6 +471,7 @@
 
     initVditor() {
       try {
+        // 初始化Vditor时添加自定义渲染规则，用于在预览时替换图片URL为CDN链接
         this.vditor = new Vditor(this.props.forID, {
           height: 500,
           value: this.state.value,
@@ -474,6 +481,31 @@
           input: (value) => {
             this.setState({ value });
             this.props.onChange(value);
+          },
+          // 添加自定义渲染规则
+          preview: {
+            hljs: {
+              enable: true,
+              style: 'github',
+            },
+            markdown: {
+              renderer: (mathBlock, previewElement) => {
+                // 在预览区域渲染图片时，将相对路径替换为CDN链接
+                const images = previewElement.querySelectorAll('img');
+                images.forEach(img => {
+                  if (img.src.startsWith('./images/')) {
+                    // 从当前文档路径提取slug
+                    const currentPath = this.getCurrentDocPath();
+                    const match = currentPath.match(/\/([^\/]+)\.md$/);
+                    if (match) {
+                      const slug = decodeURIComponent(match[1]);
+                      const filename = img.src.substring('./images/'.length);
+                      img.src = ImageUploadManager.getCdnUrl(slug, filename);
+                    }
+                  }
+                });
+              }
+            }
           }
         });
 
@@ -859,7 +891,7 @@
       }
 
       window.decapCmsVditorPlugin = {
-        version: '4.3',
+        version: '4.4',
         hasUpload: true,
         manager: ImageUploadManager
       };
