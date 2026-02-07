@@ -138,15 +138,14 @@
         try {
           const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
-          const fileExists = await this.checkFileExists(token, repoOwner, repoName, pathInRepo, contentBranch);
+          // 不检查文件是否存在，直接准备上传
           const content = await this.fileToBase64(img.file);
-          const sha = fileExists ? fileExists.sha : null;
 
           // 不立即提交，而是存储到待提交列表
           results.mediaFiles.push({
             path: pathInRepo,
             content: content,
-            sha: sha,
+            sha: null, // 新文件没有SHA
             filename: img.name
           });
 
@@ -186,17 +185,6 @@
       return this.config.branch;
     },
 
-    async checkFileExists(token, owner, repo, path, branch = null) {
-      // 对路径进行URL编码以用于API请求
-      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
-      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
-      if (branch) {
-        url += `?ref=${branch}`;
-      }
-      
-      const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
-      return res.status === 200 ? await res.json() : null;
-    },
 
     async fileToBase64(file) {
       return new Promise((resolve, reject) => {
