@@ -302,8 +302,93 @@
     componentDidMount() {
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
+      
+      // 使用Decap CMS的官方事件监听器来检测发布事件
+      if (window.CMS) {
+        // 尝试使用正确的事件名称
+        try {
+          // 监听发布事件
+          window.CMS.registerEventListener({
+            name: 'prePublish',
+            handler: async (obj) => {
+              console.log('检测到prePublish事件，即将发布文章');
+              // 发布前合并媒体分支
+              await this.mergeMediaBranch();
+            }
+          });
+          
+          // 监听保存事件
+          window.CMS.registerEventListener({
+            name: 'preSave',
+            handler: async (obj) => {
+              console.log('检测到preSave事件，即将保存文章');
+              // 保存前也尝试合并媒体分支
+              await this.mergeMediaBranch();
+            }
+          });
+        } catch (e) {
+          console.error('注册事件监听器失败:', e);
+          // 如果上面的方式不行，退回到监听路由变化的方式
+          this.handleRouteChange = this.handleRouteChange.bind(this);
+          window.addEventListener('hashchange', this.handleRouteChange, false);
+        }
+      }
     },
-
+    
+    // 合并媒体分支到主分支的方法
+    async mergeMediaBranch() {
+      if (ImageUploadManager.uploadedButUncommitted.size === 0) {
+        // 没有未提交的图片，无需合并
+        console.log('没有未提交的图片，无需合并媒体分支');
+        return;
+      }
+      
+      try {
+        const token = ImageUploadManager.getToken();
+        const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
+        
+        console.log('开始合并媒体分支到主分支...');
+        
+        // 尝试将媒体分支合并到主分支
+        const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
+          method: 'POST',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            base: mainBranch,
+            head: mediaBranch,
+            commit_message: '[Auto] Merge media assets to main'
+          })
+        });
+        
+        if (mergeRes.ok) {
+          console.log('成功将媒体分支合并到主分支');
+          
+          // 合并成功后删除媒体分支
+          try {
+            await ImageUploadManager.deleteBranch(token, repoOwner, repoName, mediaBranch);
+            console.log('成功删除媒体分支');
+          } catch (error) {
+            console.error('删除媒体分支失败:', error);
+            // 不抛出错误，因为合并已经成功
+          }
+          
+          // 清空已上传但未提交的记录
+          ImageUploadManager.uploadedButUncommitted.clear();
+        } else if(mergeRes.status === 409) {
+          // 合并冲突，可能需要手动处理
+          console.warn('媒体分支与主分支存在冲突，无法自动合并');
+        } else {
+          const errorText = await mergeRes.text();
+          console.error(`合并失败: ${mergeRes.status}`, errorText);
+        }
+      } catch (error) {
+        console.error('合并媒体分支时出错:', error);
+      }
+    },
+    
     // 在props中提供的控件方法中处理提交前逻辑
     control: {
       // 这个方法将在外部调用，当需要提交内容时
@@ -377,7 +462,12 @@
     },
 
     componentWillUnmount() {
+      // 清除定时器
       clearInterval(this.pathCheckInterval);
+      
+      // 如果使用了hashchange监听，则移除
+      window.removeEventListener('hashchange', this.handleRouteChange);
+      
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
     },
@@ -798,6 +888,60 @@
     }
 
     try {
+      // 创建一个全局的合并函数
+      window.mergeMediaBranch = async function() {
+        if (ImageUploadManager.uploadedButUncommitted.size === 0) {
+          // 没有未提交的图片，无需合并
+          console.log('没有未提交的图片，无需合并媒体分支');
+          return;
+        }
+        
+        try {
+          const token = ImageUploadManager.getToken();
+          const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
+          
+          console.log('开始合并媒体分支到主分支...');
+          
+          // 尝试将媒体分支合并到主分支
+          const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
+            method: 'POST',
+            headers: {
+              Authorization: `token ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              base: mainBranch,
+              head: mediaBranch,
+              commit_message: '[Auto] Merge media assets to main'
+            })
+          });
+          
+          if (mergeRes.ok) {
+            console.log('成功将媒体分支合并到主分支');
+            
+            // 合并成功后删除媒体分支
+            try {
+              await ImageUploadManager.deleteBranch(token, repoOwner, repoName, mediaBranch);
+              console.log('成功删除媒体分支');
+            } catch (error) {
+              console.error('删除媒体分支失败:', error);
+              // 不抛出错误，因为合并已经成功
+            }
+            
+            // 清空已上传但未提交的记录
+            ImageUploadManager.uploadedButUncommitted.clear();
+          } else if(mergeRes.status === 409) {
+            // 合并冲突，可能需要手动处理
+            console.warn('媒体分支与主分支存在冲突，无法自动合并');
+          } else {
+            const errorText = await mergeRes.text();
+            console.error(`合并失败: ${mergeRes.status}`, errorText);
+          }
+        } catch (error) {
+          console.error('合并媒体分支时出错:', error);
+        }
+      };
+      
       // 注册widget，添加数据持久化方法
       const widget = {
         control: VditorControl,
@@ -843,6 +987,11 @@
               console.error('处理媒体文件时出错:', error);
             }
           }
+          
+          // 如果有待上传的图片，合并媒体分支
+          if (ImageUploadManager.uploadedButUncommitted.size > 0) {
+            await window.mergeMediaBranch();
+          }
         }
       };
       
@@ -856,7 +1005,7 @@
       }
 
       window.decapCmsVditorPlugin = {
-        version: '4.5',
+        version: '4.7',
         hasUpload: true,
         manager: ImageUploadManager
       };
