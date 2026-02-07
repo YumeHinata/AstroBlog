@@ -1,3 +1,4 @@
+index.js
 (function () {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
@@ -113,11 +114,13 @@
       this.pendingImages = [];
     },
 
-    // 准备上传所有图片并返回markdown字符串，但暂不提交
-    async prepareUploadAll() {
-      console.log("准备上传图片，总数:", this.pendingImages.length); // 调试日志
+    // 上传所有图片并返回markdown字符串
+    async uploadAll(vditorInstance) {
       if (this.pendingImages.length === 0) throw new Error('没有图片需要上传');
+      if (this.isUploading) throw new Error('上传正在进行中');
 
+      this.isUploading = true;
+      
       // 在开始上传前验证能否获取到slug
       try {
         this.calculatePaths('test.jpg'); // 只是为了验证能否成功计算路径
@@ -132,40 +135,76 @@
       const { repoOwner, repoName } = this.config;
       const commitCfg = this.commitConfig;
 
-      const results = { success: 0, errors: [], markdowns: [], mediaFiles: [] };
+      const results = { success: 0, errors: [], markdowns: [] };
 
-      for (const img of this.pendingImages) {
-        try {
-          console.log("处理图片:", img.name); // 调试日志
-          const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
+      try {
+        for (const img of this.pendingImages) {
+          try {
+            console.log("处理图片:", img.name); // 调试日志
+            const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
-          // 不检查文件是否存在，直接准备上传
-          const content = await this.fileToBase64(img.file);
+            // 不检查文件是否存在，直接上传
+            const content = await this.fileToBase64(img.file);
 
-          // 不立即提交，而是存储到待提交列表
-          results.mediaFiles.push({
-            path: pathInRepo,
-            content: content,
-            sha: null, // 新文件没有SHA
-            filename: img.name
-          });
+            // 直接上传文件到GitHub
+            await this.commitMediaFile(token, repoOwner, repoName, pathInRepo, content, contentBranch, img.name, commitCfg, null);
 
-          results.success++;
-          results.markdowns.push(`![${img.name}](${markdownPath})`);
-          
-          this.uploadedButUncommitted.add(pathInRepo);
-        } catch (error) {
-          console.error("处理图片出错:", img.name, error); // 调试日志
-          results.errors.push(`${img.name}: ${error.message}`);
+            results.success++;
+            results.markdowns.push(`![${img.name}](${markdownPath})`);
+            
+            this.uploadedButUncommitted.add(pathInRepo);
+            
+            // 释放预览URL
+            URL.revokeObjectURL(img.previewUrl);
+          } catch (error) {
+            console.error("处理图片出错:", img.name, error); // 调试日志
+            results.errors.push(`${img.name}: ${error.message}`);
+          }
         }
+
+        if (results.markdowns.length > 0 && vditorInstance) {
+          vditorInstance.insertValue('\n' + results.markdowns.join('\n') + '\n');
+        }
+
+        this.pendingImages = [];
+        console.log("上传完成，成功:", results.success, "错误:", results.errors.length); // 调试日志
+        return results;
+      } finally {
+        this.isUploading = false;
+      }
+    },
+
+    // 提交单个媒体文件到GitHub
+    async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
+      // 对路径进行URL编码以用于API请求
+      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
+      const body = {
+        message: `${commitCfg.commitPrefix}${filename}`,
+        content,
+        branch,
+        committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
+        author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
+      };
+
+      // 只有当文件确实存在（有SHA）时才添加sha字段
+      if (sha) {
+        body.sha = sha;
       }
 
-      // 将媒体文件添加到全局待提交列表
-      pendingMediaFiles.push(...results.mediaFiles);
-      
-      this.pendingImages = [];
-      console.log("上传准备完成，待提交文件数:", results.mediaFiles.length); // 调试日志
-      return results;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const errorData = await res.text();
+        throw new Error(`GitHub API错误: ${res.status}, ${errorData}`);
+      }
     },
 
     // 获取当前内容所在分支
@@ -393,23 +432,23 @@
       }
 
       this.setState({
-        uploadStatus: '准备中...',
+        uploadStatus: '上传中...',
         showUploadPanel: false
       });
 
       try {
-        console.log("开始准备上传..."); // 调试日志
-        const result = await ImageUploadManager.prepareUploadAll();
-        console.log("上传准备结果:", result); // 调试日志
+        console.log("开始上传..."); // 调试日志
+        const result = await ImageUploadManager.uploadAll(this.vditor);
+        console.log("上传结果:", result); // 调试日志
 
         if (result.success > 0) {
           this.setState({
-            uploadStatus: `✅ 准备完成！${result.success}/${pendingCount} 张图片将在保存时一并提交`
+            uploadStatus: `✅ 上传完成！成功 ${result.success}/${pendingCount} 张`
           });
           setTimeout(() => this.setState({ uploadStatus: null }), 5000);
         } else {
           this.setState({
-            uploadStatus: '准备失败，请查看控制台',
+            uploadStatus: '上传失败，请查看控制台',
             showUploadPanel: true
           });
         }
@@ -524,7 +563,7 @@
             opacity: pendingImages.length === 0 ? 0.6 : 1,
             cursor: pendingImages.length === 0 ? 'not-allowed' : 'pointer'
           }
-        }, '🚀 准备上传'),
+        }, isUploading ? '上传中...' : '🚀 开始上传'),
 
         h('button', {
           onClick: this.handleClear,
@@ -725,7 +764,7 @@
       }
 
       window.decapCmsVditorPlugin = {
-        version: '4.1',
+        version: '4.2',
         hasUpload: true,
         manager: ImageUploadManager
       };
