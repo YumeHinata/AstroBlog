@@ -305,7 +305,7 @@
       
       // 使用Decap CMS的官方事件监听器来检测发布事件
       if (window.CMS) {
-        // 尝试使用正确的事件名称
+        // 只监听发布事件，不监听保存事件
         try {
           // 监听发布事件
           window.CMS.registerEventListener({
@@ -317,13 +317,16 @@
             }
           });
           
-          // 监听保存事件
+          // 也监听进入审核流程的事件，这通常意味着发布
           window.CMS.registerEventListener({
-            name: 'preSave',
+            name: 'preUpdateUnpublishedEntry',
             handler: async (obj) => {
-              console.log('检测到preSave事件，即将保存文章');
-              // 保存前也尝试合并媒体分支
-              await this.mergeMediaBranch();
+              // 检查是否是发布操作（从草稿状态变为发布状态）
+              if(obj.action === 'publish' || obj.action === 'changeStatus') {
+                console.log('检测到发布状态变更事件，即将发布文章');
+                // 发布前合并媒体分支
+                await this.mergeMediaBranch();
+              }
             }
           });
         } catch (e) {
@@ -368,8 +371,21 @@
           
           // 合并成功后删除媒体分支
           try {
-            await ImageUploadManager.deleteBranch(token, repoOwner, repoName, mediaBranch);
-            console.log('成功删除媒体分支');
+            const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
+            
+            const deleteRes = await fetch(deleteUrl, {
+              method: 'DELETE',
+              headers: {
+                Authorization: `token ${token}`
+              }
+            });
+
+            if (deleteRes.ok) {
+              console.log('成功删除媒体分支');
+            } else {
+              const errorData = await deleteRes.text();
+              console.error('删除分支失败:', deleteRes.status, errorData);
+            }
           } catch (error) {
             console.error('删除媒体分支失败:', error);
             // 不抛出错误，因为合并已经成功
@@ -921,8 +937,22 @@
             
             // 合并成功后删除媒体分支
             try {
-              await ImageUploadManager.deleteBranch(token, repoOwner, repoName, mediaBranch);
-              console.log('成功删除媒体分支');
+              // 使用同样的方法来删除分支
+              const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
+              
+              const deleteRes = await fetch(deleteUrl, {
+                method: 'DELETE',
+                headers: {
+                  Authorization: `token ${token}`
+                }
+              });
+
+              if (deleteRes.ok) {
+                console.log('成功删除媒体分支');
+              } else {
+                const errorData = await deleteRes.text();
+                console.error('删除分支失败:', deleteRes.status, errorData);
+              }
             } catch (error) {
               console.error('删除媒体分支失败:', error);
               // 不抛出错误，因为合并已经成功
@@ -988,10 +1018,11 @@
             }
           }
           
+          // 注意：这里不再合并分支，因为我们只想在发布时合并
           // 如果有待上传的图片，合并媒体分支
-          if (ImageUploadManager.uploadedButUncommitted.size > 0) {
-            await window.mergeMediaBranch();
-          }
+          // if (ImageUploadManager.uploadedButUncommitted.size > 0) {
+          //   await window.mergeMediaBranch();
+          // }
         }
       };
       
