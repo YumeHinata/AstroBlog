@@ -14,7 +14,8 @@
       repoOwner: 'YumeHinata',
       repoName: 'AstroBlog',
       branch: 'main',
-      mediaFolder: 'src/content/posts'  // 修改：使用posts根目录，然后根据slug创建子目录
+      mediaBranch: 'cms/media-assets',  // 专门用于媒体文件的分支
+      mediaFolder: 'src/content/posts'  // 使用posts根目录，然后根据slug创建子目录
     },
 
     commitConfig: {
@@ -89,7 +90,7 @@
       const randomSuffix = Math.floor(Math.random() * 1000);
       const safeFilename = `${timestamp}-${randomSuffix}-${filename.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
       
-      // 在post目录下创建以slug命名的子目录存放图片，使用解码后的slug
+      // 在post目录下创建以slug命名的子目录存放图片
       const pathInRepo = `${mediaFolder}/${slug}/images/${safeFilename}`;
       const markdownPath = `./images/${safeFilename}`;
       return { pathInRepo, markdownPath };
@@ -130,13 +131,15 @@
       }
 
       const token = this.getToken();
-      const contentBranch = this.getCurrentContentBranch();
-      const { repoOwner, repoName } = this.config;
+      const { repoOwner, repoName, mediaBranch } = this.config; // 使用媒体分支
       const commitCfg = this.commitConfig;
 
       const results = { success: 0, errors: [], markdowns: [] };
 
       try {
+        // 确保媒体分支存在
+        await this.ensureMediaBranch(token, repoOwner, repoName, mediaBranch);
+
         for (const img of this.pendingImages) {
           try {
             console.log("处理图片:", img.name); // 调试日志
@@ -145,8 +148,8 @@
             // 不检查文件是否存在，直接上传
             const content = await this.fileToBase64(img.file);
 
-            // 直接上传文件到GitHub
-            await this.commitMediaFile(token, repoOwner, repoName, pathInRepo, content, contentBranch, img.name, commitCfg, null);
+            // 上传到媒体分支
+            await this.commitMediaFile(token, repoOwner, repoName, pathInRepo, content, mediaBranch, img.name, commitCfg, null);
 
             results.success++;
             results.markdowns.push(`![${img.name}](${markdownPath})`);
@@ -170,6 +173,45 @@
         return results;
       } finally {
         this.isUploading = false;
+      }
+    },
+
+    // 确保媒体分支存在
+    async ensureMediaBranch(token, owner, repo, branch) {
+      // 检查分支是否存在
+      const branchRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches/${branch}`, {
+        headers: { Authorization: `token ${token}` }
+      });
+
+      if (branchRes.status === 404) {
+        // 分支不存在，需要从主分支创建
+        const mainRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/main`, {
+          headers: { Authorization: `token ${token}` }
+        });
+
+        if (mainRes.ok) {
+          const mainData = await mainRes.json();
+          const sha = mainData.object.sha;
+
+          // 创建新分支
+          const createRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
+            method: 'POST',
+            headers: {
+              Authorization: `token ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              ref: `refs/heads/${branch}`,
+              sha: sha
+            })
+          });
+
+          if (!createRes.ok) {
+            throw new Error(`无法创建分支 ${branch}: ${createRes.status}`);
+          }
+        } else {
+          throw new Error('无法获取主分支SHA');
+        }
       }
     },
 
@@ -254,8 +296,62 @@
     componentDidMount() {
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
+      
+      // 监听发布事件，将媒体分支合并到主分支
+      if (window.CMS) {
+        // 在内容发布时合并媒体分支
+        window.CMS_EVENTS = window.CMS_EVENTS || {};
+        window.CMS_EVENTS.onPublish = async (collection, slug) => {
+          try {
+            await this.mergeMediaBranch();
+          } catch (error) {
+            console.error('合并媒体分支时出错:', error);
+          }
+        };
+      }
     },
     
+    // 合并媒体分支到主分支的方法
+    async mergeMediaBranch() {
+      if (ImageUploadManager.uploadedButUncommitted.size === 0) {
+        // 没有未提交的图片，无需合并
+        return;
+      }
+      
+      try {
+        const token = ImageUploadManager.getToken();
+        const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
+        
+        // 尝试将媒体分支合并到主分支
+        const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
+          method: 'POST',
+          headers: {
+            Authorization: `token ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            base: mainBranch,
+            head: mediaBranch,
+            commit_message: '[Auto] Merge media assets to main'
+          })
+        });
+        
+        if (mergeRes.ok) {
+          console.log('成功将媒体分支合并到主分支');
+          // 清空已上传但未提交的记录
+          ImageUploadManager.uploadedButUncommitted.clear();
+        } else if(mergeRes.status === 409) {
+          // 合并冲突，可能需要手动处理
+          console.warn('媒体分支与主分支存在冲突，无法自动合并');
+        } else {
+          const errorText = await mergeRes.text();
+          console.error(`合并失败: ${mergeRes.status}`, errorText);
+        }
+      } catch (error) {
+        console.error('合并媒体分支时出错:', error);
+      }
+    },
+
     // 在props中提供的控件方法中处理提交前逻辑
     control: {
       // 这个方法将在外部调用，当需要提交内容时
@@ -264,10 +360,10 @@
           try {
             // 获取token
             const token = ImageUploadManager.getToken();
-            const { repoOwner, repoName } = ImageUploadManager.config;
+            const { repoOwner, repoName, mediaBranch } = ImageUploadManager.config; // 使用媒体分支
             const contentBranch = ImageUploadManager.getCurrentContentBranch();
             
-            // 提交所有待处理的媒体文件
+            // 提交所有待处理的媒体文件到媒体分支
             for (const mediaFile of pendingMediaFiles) {
               try {
                 await this.commitMediaFile(
@@ -276,7 +372,7 @@
                   repoName, 
                   mediaFile.path, 
                   mediaFile.content, 
-                  contentBranch,
+                  mediaBranch, // 使用媒体分支
                   mediaFile.filename,
                   ImageUploadManager.commitConfig,
                   mediaFile.sha
@@ -721,10 +817,10 @@
             try {
               // 获取token
               const token = ImageUploadManager.getToken();
-              const { repoOwner, repoName } = ImageUploadManager.config;
+              const { repoOwner, repoName, mediaBranch } = ImageUploadManager.config; // 使用媒体分支
               const contentBranch = ImageUploadManager.getCurrentContentBranch();
               
-              // 提交所有待处理的媒体文件
+              // 提交所有待处理的媒体文件到媒体分支
               for (const mediaFile of pendingMediaFiles) {
                 try {
                   await VditorControl.prototype.commitMediaFile.call(
@@ -734,7 +830,7 @@
                     repoName, 
                     mediaFile.path, 
                     mediaFile.content, 
-                    contentBranch,
+                    mediaBranch, // 使用媒体分支
                     mediaFile.filename,
                     ImageUploadManager.commitConfig,
                     mediaFile.sha
@@ -763,7 +859,7 @@
       }
 
       window.decapCmsVditorPlugin = {
-        version: '4.2',
+        version: '4.3',
         hasUpload: true,
         manager: ImageUploadManager
       };
