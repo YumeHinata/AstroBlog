@@ -187,11 +187,13 @@
     },
 
     async checkFileExists(token, owner, repo, path, branch = null) {
-      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      // 对路径进行URL编码以用于API请求
+      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
+      let url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       if (branch) {
         url += `?ref=${branch}`;
       }
-
+      
       const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
       return res.status === 200 ? await res.json() : null;
     },
@@ -206,7 +208,9 @@
     },
 
     async pushToGitHub(token, owner, repo, path, content, branch, commitCfg, filename, sha) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      // 对路径进行URL编码以用于API请求
+      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       const body = {
         message: `${commitCfg.commitPrefix}${filename}`,
         content,
@@ -257,7 +261,9 @@
 
     // 提交单个媒体文件
     async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      // 对路径进行URL编码以用于API请求
+      const encodedPath = encodeURIComponent(path).replace(/\//g, '%2F');
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodedPath}`;
       const body = {
         message: `${commitCfg.commitPrefix}${filename}`,
         content,
@@ -340,10 +346,24 @@
         return decodeURIComponent(window.CMS.activeEntry.path);
       }
       if (this.props.entry?.path) {
-        // 解码路径中的URL编码字符
         return decodeURIComponent(this.props.entry.path);
       }
-      return 'src/content/posts/new-post.md';
+      
+      // 尝试从URL中获取当前文档路径
+      try {
+        const url = window.location.href;
+        const match = url.match(/\/entries\/([^\/\?#]+)/);
+        if (match && match[1]) {
+          const slug = decodeURIComponent(match[1]);
+          if (slug && slug !== 'new' && slug !== 'create') {
+            return `src/content/posts/${slug}.md`;
+          }
+        }
+      } catch (e) {
+        console.error('无法从URL中确定文档路径:', e);
+      }
+      
+      return '无法确定当前文档路径';
     },
 
     initVditor() {
