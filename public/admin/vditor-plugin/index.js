@@ -303,7 +303,22 @@
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
       
-      // 我们现在使用beforeSubmit钩子处理合并，不再需要额外的事件监听器
+      // 添加hashchange监听器来检测发布完成
+      this.handleHashChange = this.handleHashChange.bind(this);
+      window.addEventListener('hashchange', this.handleHashChange);
+    },
+    
+    handleHashChange(event) {
+      // 检测到从编辑页面跳转到其他页面，认为是发布完成
+      const currentPath = event.newURL;
+      const previousPath = event.oldURL;
+      
+      if (previousPath && previousPath.includes('/entries/') && !currentPath.includes('/entries/')) {
+        // 延迟执行，确保发布操作完全完成
+        setTimeout(async () => {
+          await this.mergeMediaBranch();
+        }, 2000);
+      }
     },
     
     // 合并媒体分支到主分支的方法
@@ -448,6 +463,9 @@
     componentWillUnmount() {
       // 清除定时器
       clearInterval(this.pathCheckInterval);
+      
+      // 移除hashchange监听器
+      window.removeEventListener('hashchange', this.handleHashChange);
       
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
@@ -982,10 +1000,8 @@
             }
           }
           
-          // 在提交时合并媒体分支（这是在发布或保存时都会触发）
-          if (ImageUploadManager.uploadedButUncommitted.size > 0) {
-            await window.mergeMediaBranch();
-          }
+          // 注意：在这里我们不合并分支，因为这会在每次保存时触发
+          // 我们只在发布时合并分支，因此这部分留空
         }
       };
       
@@ -998,12 +1014,15 @@
         window.CMS_EVENTS = { beforeSubmit: widget.beforeSubmit };
       }
 
-      // 注册发布事件监听器，只在正式发布时合并媒体分支
-      if (window.CMS && window.CMS_EVENTS) {
-        window.CMS_EVENTS.on('PRE_PUBLISH_ENTRY', async (payload) => {
-          console.log('检测到PRE_PUBLISH_ENTRY事件，即将发布文章');
-          // 发布前合并媒体分支
-          await window.mergeMediaBranch();
+      // 使用正确的事件注册方式注册发布事件监听器
+      if (window.CMS && typeof window.CMS.registerEventListener === 'function') {
+        window.CMS.registerEventListener({
+          name: 'prePublish',
+          handler: async (obj) => {
+            console.log('检测到prePublish事件，即将发布文章');
+            // 发布前合并媒体分支
+            await window.mergeMediaBranch();
+          }
         });
       }
 
