@@ -1,4 +1,3 @@
-index.js
 (function () {
   'use strict';
   if (window.decapCmsVditorPlugin) return;
