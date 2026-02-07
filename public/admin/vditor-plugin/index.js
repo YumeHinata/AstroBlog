@@ -86,10 +86,10 @@
         throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
       }
       
-      // 清理文件名，只保留字母、数字、点、连字符和下划线
-      const safeFilename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-      // 确保slug也只包含安全字符
-      const safeSlug = slug.replace(/[^a-zA-Z0-9_-]/g, '_');
+      // 保留字母、数字、中文、连字符、下划线和点，替换其他特殊字符为下划线
+      const safeFilename = filename.replace(/[^a-zA-Z0-9\u4e00-\u9fa5._-]/g, '_');
+      // 对slug也做同样处理，保留中文字符
+      const safeSlug = slug.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_');
       
       // 在post目录下的images子目录中创建以slug命名的子目录存放图片
       const pathInRepo = `${mediaFolder}/images/${safeSlug}/${safeFilename}`;
