@@ -8,14 +8,12 @@
   const ImageUploadManager = {
     pendingImages: [],
     isUploading: false,
-    uploadedButUncommitted: new Set(),
 
     config: {
       repoOwner: 'YumeHinata',
       repoName: 'AstroBlog',
       branch: 'main',
-      mediaBranch: 'cms/media-assets',  // 专门用于媒体文件的分支
-      mediaFolder: 'src/content/posts'  // 使用posts根目录，然后根据slug创建子目录
+      mediaFolder: 'src/content/posts'
     },
 
     commitConfig: {
@@ -146,11 +144,31 @@
             console.log("处理图片:", img.name); // 调试日志
             const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
-            // 直接上传，不检查文件是否存在
+            // 检查文件是否已存在
+            const checkUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${pathInRepo}?ref=${mediaBranch}`;
+            const checkRes = await fetch(checkUrl, {
+              headers: { Authorization: `token ${token}` }
+            });
+            
+            if (checkRes.ok) {
+              // 文件已存在，直接使用现有文件
+              console.log(`文件已存在: ${pathInRepo}，使用现有文件`);
+              results.success++;
+              results.markdowns.push(`![${img.name}](${markdownPath})`);
+              
+              // 添加到已上传集合，但不实际上传
+              this.uploadedButUncommitted.add(pathInRepo);
+              
+              // 释放预览URL
+              URL.revokeObjectURL(img.previewUrl);
+              continue; // 跳过上传步骤
+            }
+
+            // 文件不存在，执行上传
             const content = await this.fileToBase64(img.file);
 
             // 上传到媒体分支
-            await this.commitMediaFile(token, repoOwner, repoName, pathInRepo, content, mediaBranch, img.name, commitCfg, null);
+            await this.commitMediaFile(token, repoOwner, repoName, pathInRepo, content, mediaBranch, img.name, commitCfg);
 
             results.success++;
             results.markdowns.push(`![${img.name}](${markdownPath})`);
@@ -174,7 +192,7 @@
           console.error('以下图片上传失败:', results.errors);
           alert(`部分图片上传失败:\n${results.errors.join('\n')}\n\n但已成功上传的图片已插入编辑器。`);
         } else if(results.success > 0){
-          alert(`✅ 成功上传 ${results.success} 张图片到媒体库`);
+          alert(`✅ 成功处理 ${results.success} 张图片到媒体库`);
         }
 
         this.pendingImages = [];
@@ -185,44 +203,6 @@
       }
     },
 
-    // 确保媒体分支存在
-    async ensureMediaBranch(token, owner, repo, branch) {
-      // 检查分支是否存在
-      const branchRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/branches/${branch}`, {
-        headers: { Authorization: `token ${token}` }
-      });
-
-      if (branchRes.status === 404) {
-        // 分支不存在，需要从主分支创建
-        const mainRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/main`, {
-          headers: { Authorization: `token ${token}` }
-        });
-
-        if (mainRes.ok) {
-          const mainData = await mainRes.json();
-          const sha = mainData.object.sha;
-
-          // 创建新分支
-          const createRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs`, {
-            method: 'POST',
-            headers: {
-              Authorization: `token ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              ref: `refs/heads/${branch}`,
-              sha: sha
-            })
-          });
-
-          if (!createRes.ok) {
-            throw new Error(`无法创建分支 ${branch}: ${createRes.status}`);
-          }
-        } else {
-          throw new Error('无法获取主分支SHA');
-        }
-      }
-    },
 
     // 提交单个媒体文件到GitHub
     async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
@@ -312,90 +292,6 @@
     componentDidMount() {
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
-      
-      // 添加hashchange监听器来检测发布完成
-      this.handleHashChange = this.handleHashChange.bind(this);
-      window.addEventListener('hashchange', this.handleHashChange);
-    },
-    
-    handleHashChange(event) {
-      // 检测到从编辑页面跳转到其他页面，认为是发布完成
-      const currentPath = event.newURL;
-      const previousPath = event.oldURL;
-      
-      if (previousPath && previousPath.includes('/entries/') && !currentPath.includes('/entries/')) {
-        // 延迟执行，确保发布操作完全完成
-        setTimeout(async () => {
-          await this.mergeMediaBranch();
-        }, 2000);
-      }
-    },
-    
-    // 合并媒体分支到主分支的方法
-    async mergeMediaBranch() {
-      if (ImageUploadManager.uploadedButUncommitted.size === 0) {
-        // 没有未提交的图片，无需合并
-        console.log('没有未提交的图片，无需合并媒体分支');
-        return;
-      }
-      
-      try {
-        const token = ImageUploadManager.getToken();
-        const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
-        
-        console.log('开始合并媒体分支到主分支...');
-        
-        // 尝试将媒体分支合并到主分支
-        const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
-          method: 'POST',
-          headers: {
-            Authorization: `token ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            base: mainBranch,
-            head: mediaBranch,
-            commit_message: '[Auto] Merge media assets to main'
-          })
-        });
-        
-        if (mergeRes.ok) {
-          console.log('成功将媒体分支合并到主分支');
-          
-          // 合并成功后删除媒体分支
-          try {
-            const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
-            
-            const deleteRes = await fetch(deleteUrl, {
-              method: 'DELETE',
-              headers: {
-                Authorization: `token ${token}`
-              }
-            });
-
-            if (deleteRes.ok) {
-              console.log('成功删除媒体分支');
-            } else {
-              const errorData = await deleteRes.text();
-              console.error('删除分支失败:', deleteRes.status, errorData);
-            }
-          } catch (error) {
-            console.error('删除媒体分支失败:', error);
-            // 不抛出错误，因为合并已经成功
-          }
-          
-          // 清空已上传但未提交的记录
-          ImageUploadManager.uploadedButUncommitted.clear();
-        } else if(mergeRes.status === 409) {
-          // 合并冲突，可能需要手动处理
-          console.warn('媒体分支与主分支存在冲突，无法自动合并');
-        } else {
-          const errorText = await mergeRes.text();
-          console.error(`合并失败: ${mergeRes.status}`, errorText);
-        }
-      } catch (error) {
-        console.error('合并媒体分支时出错:', error);
-      }
     },
     
     // 在props中提供的控件方法中处理提交前逻辑
@@ -437,52 +333,12 @@
       }
     },
     
-    // 提交单个媒体文件
-    async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
-      // 使用原始路径，让fetch自动处理编码
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-      const body = {
-        message: `${commitCfg.commitPrefix}${filename}`,
-        content,
-        branch: branch,
-        committer: { name: commitCfg.authorName, email: commitCfg.authorEmail },
-        author: { name: commitCfg.authorName, email: commitCfg.authorEmail }
-      };
-
-      // 只有当文件确实存在（有SHA）时才添加sha字段
-      if (sha) {
-        body.sha = sha;
-      }
-
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: {
-          Authorization: `token ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
-      });
-
-      if (!res.ok) {
-        const errorData = await res.text();
-        console.error(`GitHub API错误详情: ${errorData}`);
-        console.error(`请求URL: ${url}`);
-        console.error(`路径原始值: ${path}`);
-        console.error(`请求体: ${JSON.stringify({message: body.message, contentLength: content.length, branch: body.branch}, null, 2)}`);
-        throw new Error(`GitHub API错误: ${res.status}, ${errorData}`);
-      }
-      
-      // 成功上传后返回数据
-      return await res.json();
-    },
 
     componentWillUnmount() {
       // 清除定时器
       clearInterval(this.pathCheckInterval);
       
-      // 移除hashchange监听器
-      window.removeEventListener('hashchange', this.handleHashChange);
-      
+      // 由于我们使用全局hashchange监听器，不需要在组件中移除
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
     },
@@ -903,73 +759,6 @@
     }
 
     try {
-      // 创建一个全局的合并函数
-      window.mergeMediaBranch = async function() {
-        if (ImageUploadManager.uploadedButUncommitted.size === 0) {
-          // 没有未提交的图片，无需合并
-          console.log('没有未提交的图片，无需合并媒体分支');
-          return;
-        }
-        
-        try {
-          const token = ImageUploadManager.getToken();
-          const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
-          
-          console.log('开始合并媒体分支到主分支...');
-          
-          // 尝试将媒体分支合并到主分支
-          const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
-            method: 'POST',
-            headers: {
-              Authorization: `token ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              base: mainBranch,
-              head: mediaBranch,
-              commit_message: '[Auto] Merge media assets to main'
-            })
-          });
-          
-          if (mergeRes.ok) {
-            console.log('成功将媒体分支合并到主分支');
-            
-            // 合并成功后删除媒体分支
-            try {
-              const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
-              
-              const deleteRes = await fetch(deleteUrl, {
-                method: 'DELETE',
-                headers: {
-                  Authorization: `token ${token}`
-                }
-              });
-
-              if (deleteRes.ok) {
-                console.log('成功删除媒体分支');
-              } else {
-                const errorData = await deleteRes.text();
-                console.error('删除分支失败:', deleteRes.status, errorData);
-              }
-            } catch (error) {
-              console.error('删除媒体分支失败:', error);
-              // 不抛出错误，因为合并已经成功
-            }
-            
-            // 清空已上传但未提交的记录
-            ImageUploadManager.uploadedButUncommitted.clear();
-          } else if(mergeRes.status === 409) {
-            // 合并冲突，可能需要手动处理
-            console.warn('媒体分支与主分支存在冲突，无法自动合并');
-          } else {
-            const errorText = await mergeRes.text();
-            console.error(`合并失败: ${mergeRes.status}`, errorText);
-          }
-        } catch (error) {
-          console.error('合并媒体分支时出错:', error);
-        }
-      };
-      
       // 注册widget，添加数据持久化方法
       const widget = {
         control: VditorControl,
@@ -1028,18 +817,6 @@
         window.CMS_EVENTS.beforeSubmit = widget.beforeSubmit;
       } else {
         window.CMS_EVENTS = { beforeSubmit: widget.beforeSubmit };
-      }
-
-      // 使用正确的事件注册方式注册发布事件监听器
-      if (window.CMS && typeof window.CMS.registerEventListener === 'function') {
-        window.CMS.registerEventListener({
-          name: 'prePublish',
-          handler: async (obj) => {
-            console.log('检测到prePublish事件，即将发布文章');
-            // 发布前合并媒体分支
-            await window.mergeMediaBranch();
-          }
-        });
       }
 
       window.decapCmsVditorPlugin = {
