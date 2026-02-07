@@ -9,3 +9,5 @@ category: vditor,测试
 draft: false
 ---
 新建内容
+
+![122230389_p0.png](./images/1770466883313-552-122230389_p0.png)
