@@ -8,6 +8,7 @@
   const ImageUploadManager = {
     pendingImages: [],
     isUploading: false,
+    uploadedButUncommitted: new Set(),  // 初始化为Set对象
 
     config: {
       repoOwner: 'YumeHinata',
@@ -909,7 +910,7 @@
 
   // 合并媒体文件到主分支的函数
   async function mergeMediaToMain() {
-    if (ImageUploadManager.uploadedButUncommitted.size === 0) {
+    if (!ImageUploadManager.uploadedButUncommitted || ImageUploadManager.uploadedButUncommitted.size === 0) {
       // 没有未提交的图片，无需合并
       console.log('没有未提交的图片，无需合并媒体分支');
       return;
