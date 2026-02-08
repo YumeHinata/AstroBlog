@@ -1241,3 +1241,26 @@ draft: false
 }
 
 ```
+
+## 使用说明：
+
+这种垃圾代码就不传github污染copilot了，不过姑且写个使用说明给自己看吧。
+
+`{ label: "正文", name: "body", widget: "vditor" }`config.yml里做出修改`widget`不再是`markdown`，应该为`vditor`
+
+在admin.html `head`中引入以下样式表：
+
+```
+  <link rel="stylesheet" href="/admin/vditor/index.css" />
+  <link rel="stylesheet" href="/admin/vditor-plugin/style.css" />
+```
+
+`body`中按顺序引入以下脚本：
+
+```
+  <script src="/admin/vditor/index.min.js"></script>
+  <script src="https://unpkg.com/decap-cms@^3.1.2/dist/decap-cms.js"></script>
+  <script src="/admin/vditor-plugin/index.js"></script>
+```
+
+需要注意目前幻梦是固定了vditor编辑器的版本在本地，其使用中也可以替换为vditor官方的cdn版本。
