@@ -5,80 +5,136 @@
 
   // 创建一个模拟Toastify的通知函数
   function showToast(message, type = 'info', duration = 3000) {
+    // 检查是否有动画样式，如果没有则添加
+    if (!document.querySelector('#vditor-toast-styles')) {
+      const styles = document.createElement('style');
+      styles.id = 'vditor-toast-styles';
+      styles.textContent = `
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
+          }
+        }
+      `;
+      document.head.appendChild(styles);
+    }
+
     // 检查是否已有Toastify容器，如果没有则创建
     let container = document.querySelector('.Toastify');
     if (!container) {
       container = document.createElement('div');
       container.className = 'Toastify';
-      // 默认放置在右上角
+      // 修改定位方式，使用固定定位但不干扰原有布局
       container.style.cssText = `
         position: fixed;
-        top: 1em;
-        right: 1em;
-        z-index: 9999;
-        padding: 4px;
-        width: 320px;
-        box-sizing: border-box;
+        top: 20px;
+        right: 20px;
+        z-index: 10000;
+        min-width: 300px;
+        max-width: 400px;
       `;
       document.body.appendChild(container);
     }
 
     // 创建toast元素
     const toast = document.createElement('div');
-    toast.className = `Toastify__toast Toastify__toast-theme--colored Toastify__toast--${type}`;
+    toast.className = `vditor-toast Toastify__toast Toastify__toast-theme--colored Toastify__toast--${type}`;
     
     // 根据类型设置背景色
     const bgColorMap = {
-      'success': 'var(--toastify-color-success)',
-      'error': 'var(--toastify-color-error)',
-      'warning': 'var(--toastify-color-warning)',
-      'info': 'var(--toastify-color-info)'
+      'success': 'var(--toastify-color-success, #07bc0c)',
+      'error': 'var(--toastify-color-error, #e74c3c)',
+      'warning': 'var(--toastify-color-warning, #f1c40f)',
+      'info': 'var(--toastify-color-info, #3498db)'
     };
     
     toast.style.cssText = `
       position: relative;
-      min-height: var(--toastify-toast-min-height);
+      min-height: var(--toastify-toast-min-height, 64px);
       box-sizing: border-box;
       margin-bottom: 1rem;
-      padding: 8px;
-      border-radius: 4px;
-      box-shadow: 0 1px 10px 0 rgba(0,0,0,.1), 0 2px 15px 0 rgba(0,0,0,.05);
+      padding: 12px 16px;
+      border-radius: 6px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
       display: flex;
       justify-content: space-between;
-      max-height: var(--toastify-toast-max-height);
+      align-items: center;
+      max-height: 120px;
       overflow: hidden;
-      font-family: var(--toastify-font-family);
+      font-family: var(--toastify-font-family, sans-serif);
       cursor: default;
       direction: ltr;
       z-index: 0;
-      background: ${bgColorMap[type] || 'var(--toastify-color-light)'};
-      color: ${type === 'success' || type === 'error' || type === 'warning' || type === 'info' 
-        ? 'var(--toastify-text-color-' + type + ')' 
-        : 'var(--toastify-text-color-light)'};
+      background: ${bgColorMap[type]};
+      color: white;
+      animation: slideInRight 0.3s ease-out;
     `;
 
     // 添加内容
     const body = document.createElement('div');
     body.className = 'Toastify__toast-body';
-    body.innerHTML = `<div>${message.replace(/\n/g, '<br>')}</div>`;
+    body.innerHTML = `<div style="word-break: break-word; flex: 1;">${message.replace(/\n/g, '<br>')}</div>`;
     
     toast.appendChild(body);
 
     // 添加关闭按钮
     const closeButton = document.createElement('button');
     closeButton.className = 'Toastify__close-button';
-    closeButton.innerHTML = '&times;';
+    closeButton.innerHTML = '×';
+    closeButton.style.cssText = `
+      background: transparent;
+      border: none;
+      color: inherit;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 0;
+      margin-left: 10px;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    `;
+    
     closeButton.onclick = () => {
-      container.removeChild(toast);
+      if (container.contains(toast)) {
+        toast.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => {
+          if (container.contains(toast)) {
+            container.removeChild(toast);
+          }
+        }, 300);
+      }
     };
+    
     toast.appendChild(closeButton);
 
     container.appendChild(toast);
 
     // 自动移除toast
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       if (container.contains(toast)) {
-        container.removeChild(toast);
+        toast.style.animation = 'fadeOut 0.3s ease-out';
+        setTimeout(() => {
+          if (container.contains(toast)) {
+            container.removeChild(toast);
+          }
+        }, 300);
       }
     }, duration);
   }
