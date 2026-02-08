@@ -64,9 +64,84 @@
     showToast('测试警告通知', 'warning', 10000);
     showToast('测试信息通知', 'info', 10000);
   }
-
+  
   // 将测试函数暴露到全局，方便调试
   window.testVditorNotifications = testNotifications;
+  
+  function init() {
+    if (!window.createClass || !window.h) {
+      setTimeout(init, 100);
+      return;
+    }
+    registerPlugin();
+  }
+
+  // 合并媒体文件到主分支的函数
+  async function mergeMediaToMain() {
+    if (!ImageUploadManager.uploadedButUncommitted || ImageUploadManager.uploadedButUncommitted.size === 0) {
+      // 没有未提交的图片，无需合并
+      return;
+    }
+
+    try {
+      const token = ImageUploadManager.getToken();
+      const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
+
+      // 尝试将媒体分支合并到主分支
+      const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
+        method: 'POST',
+        headers: {
+          Authorization: `token ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          base: mainBranch,
+          head: mediaBranch,
+          commit_message: '[Auto] Merge media assets to main'
+        })
+      });
+
+      if (mergeRes.ok) {
+        showToast('✅ 成功将媒体分支合并到主分支', 'success');
+        
+        // 合并成功后删除媒体分支
+        try {
+          const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
+
+          const deleteRes = await fetch(deleteUrl, {
+            method: 'DELETE',
+            headers: {
+              Authorization: `token ${token}`
+            }
+          });
+
+          if (deleteRes.ok) {
+            showToast('🗑️ 成功删除媒体分支', 'info');
+          } else {
+            const errorData = await deleteRes.text();
+            console.error('删除分支失败:', deleteRes.status, errorData);
+          }
+        } catch (error) {
+          console.error('删除媒体分支失败:', error);
+          // 不抛出错误，因为合并已经成功
+        }
+
+        // 清空已上传但未提交的记录
+        ImageUploadManager.uploadedButUncommitted.clear();
+      } else if (mergeRes.status === 409) {
+        // 合并冲突，可能需要手动处理
+        console.warn('媒体分支与主分支存在冲突，无法自动合并');
+        showToast('⚠️ 媒体分支与主分支存在冲突，无法自动合并', 'warning', 5000);
+      } else {
+        const errorText = await mergeRes.text();
+        console.error(`合并失败: ${mergeRes.status}`, errorText);
+        showToast(`❌ 合并失败: ${mergeRes.status}`, 'error', 5000);
+      }
+    } catch (error) {
+      console.error('合并媒体分支时出错:', error);
+      showToast(`❌ 合并媒体分支时出错: ${error.message}`, 'error', 5000);
+    }
+  }
 
   // Slug工具类，用于处理slug相关的功能
   const SlugUtils = {
@@ -814,86 +889,6 @@
       console.log('✅ Vditor插件已注册');
     } catch (e) {
       console.error('插件注册失败:', e);
-    }
-  }
-
-  function init() {
-    if (!window.createClass || !window.h) {
-      setTimeout(init, 100);
-      return;
-    }
-    registerPlugin();
-  }
-
-  // 合并媒体文件到主分支的函数
-  async function mergeMediaToMain() {
-    if (!ImageUploadManager.uploadedButUncommitted || ImageUploadManager.uploadedButUncommitted.size === 0) {
-      // 没有未提交的图片，无需合并
-      console.log('没有未提交的图片，无需合并媒体分支');
-      return;
-    }
-
-    try {
-      const token = ImageUploadManager.getToken();
-      const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
-
-      console.log('开始合并媒体分支到主分支...');
-
-      // 尝试将媒体分支合并到主分支
-      const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
-        method: 'POST',
-        headers: {
-          Authorization: `token ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          base: mainBranch,
-          head: mediaBranch,
-          commit_message: '[Auto] Merge media assets to main'
-        })
-      });
-
-      if (mergeRes.ok) {
-        console.log('成功将媒体分支合并到主分支');
-        showToast('✅ 成功将媒体分支合并到主分支', 'success');
-        
-        // 合并成功后删除媒体分支
-        try {
-          const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
-
-          const deleteRes = await fetch(deleteUrl, {
-            method: 'DELETE',
-            headers: {
-              Authorization: `token ${token}`
-            }
-          });
-
-          if (deleteRes.ok) {
-            console.log('成功删除媒体分支');
-            showToast('🗑️ 成功删除媒体分支', 'info');
-          } else {
-            const errorData = await deleteRes.text();
-            console.error('删除分支失败:', deleteRes.status, errorData);
-          }
-        } catch (error) {
-          console.error('删除媒体分支失败:', error);
-          // 不抛出错误，因为合并已经成功
-        }
-
-        // 清空已上传但未提交的记录
-        ImageUploadManager.uploadedButUncommitted.clear();
-      } else if (mergeRes.status === 409) {
-        // 合并冲突，可能需要手动处理
-        console.warn('媒体分支与主分支存在冲突，无法自动合并');
-        showToast('⚠️ 媒体分支与主分支存在冲突，无法自动合并', 'warning', 5000);
-      } else {
-        const errorText = await mergeRes.text();
-        console.error(`合并失败: ${mergeRes.status}`, errorText);
-        showToast(`❌ 合并失败: ${mergeRes.status}`, 'error', 5000);
-      }
-    } catch (error) {
-      console.error('合并媒体分支时出错:', error);
-      showToast(`❌ 合并媒体分支时出错: ${error.message}`, 'error', 5000);
     }
   }
 
