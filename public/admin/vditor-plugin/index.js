@@ -16,19 +16,19 @@
     // 创建toast元素
     const toast = document.createElement('div');
     toast.className = `vditor-toast Toastify__toast Toastify__toast--${type}`;
-    
+
     // 添加内容
     const body = document.createElement('div');
     body.className = 'Toastify__toast-body';
     body.innerHTML = `<div>${message.replace(/\n/g, '<br>')}</div>`;
-    
+
     toast.appendChild(body);
 
     // 添加关闭按钮
     const closeButton = document.createElement('button');
     closeButton.className = 'Toastify__close-button';
     closeButton.innerHTML = '×';
-    
+
     closeButton.onclick = () => {
       if (container.contains(toast)) {
         toast.classList.add('fade-out');
@@ -39,7 +39,7 @@
         }, 300);
       }
     };
-    
+
     toast.appendChild(closeButton);
 
     container.appendChild(toast);
@@ -64,10 +64,10 @@
     showToast('测试警告通知', 'warning', 10000);
     showToast('测试信息通知', 'info', 10000);
   }
-  
+
   // 将测试函数暴露到全局，方便调试
   window.testVditorNotifications = testNotifications;
-  
+
   function init() {
     if (!window.createClass || !window.h) {
       setTimeout(init, 100);
@@ -81,14 +81,14 @@
     // 检查媒体分支是否存在
     const token = ImageUploadManager.getToken();
     const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
-    
+
     try {
       // 检查媒体分支是否存在
       const branchCheckUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/branches/${mediaBranch}`;
       const branchCheckRes = await fetch(branchCheckUrl, {
         headers: { Authorization: `token ${token}` }
       });
-      
+
       if (branchCheckRes.status === 404) {
         // 媒体分支不存在，无需合并
         console.log('媒体分支不存在，无需合并');
@@ -98,10 +98,10 @@
         console.error(`检查分支状态失败: ${branchCheckRes.status}, ${errorData}`);
         return;
       }
-      
+
       // 如果媒体分支存在，则执行合并
       console.log('开始合并媒体分支到主分支...');
-      
+
       const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
         method: 'POST',
         headers: {
@@ -118,7 +118,7 @@
       if (mergeRes.ok) {
         console.log('成功将媒体分支合并到主分支');
         showToast('✅ 成功将媒体分支合并到主分支', 'success');
-        
+
         // 合并成功后删除媒体分支
         try {
           const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
@@ -213,7 +213,7 @@
 
     commitConfig: {
       authorName: 'Decap CMS Editor',
-      authorEmail: 'editor@example.com',
+      authorEmail: 'editor@yumehinata.com',
       commitPrefix: '[Media] Upload: '
     },
 
@@ -339,10 +339,10 @@
 
         if (results.errors.length > 0) {
           console.error('以下图片上传失败:', results.errors);
-          
+
           // 使用自定义的Toastify样式通知
           showToast(`部分图片上传失败:\n${results.errors.join('\n')}\n\n但已成功上传的图片已插入编辑器。`, 'error', 5000);
-        } else if(results.success > 0){
+        } else if (results.success > 0) {
           // 使用自定义的Toastify样式通知
           showToast(`✅ 成功处理 ${results.success} 张图片到媒体库`, 'success');
         }
@@ -669,7 +669,7 @@
             uploadStatus: `✅ 上传完成！成功 ${result.success}/${pendingCount} 张`
           });
           setTimeout(() => this.setState({ uploadStatus: null }), 5000);
-          
+
           // 显示成功通知
           showToast(`✅ 成功上传 ${result.success} 张图片`, 'success');
         } else {
@@ -677,7 +677,7 @@
             uploadStatus: '上传失败，请查看控制台',
             showUploadPanel: true
           });
-          
+
           // 显示失败通知
           showToast('❌ 图片上传失败，请重试', 'error');
         }
@@ -691,7 +691,7 @@
           uploadStatus: `错误: ${error.message}`,
           showUploadPanel: true
         });
-        
+
         // 显示错误通知
         showToast(`❌ 上传出错: ${error.message}`, 'error', 5000);
       }
@@ -703,7 +703,7 @@
         uploadStatus: '已清空暂存图片',
         showUploadPanel: false
       });
-      
+
       // 显示清空成功的通知
       showToast('🗑️ 已清空暂存图片', 'info');
     },
