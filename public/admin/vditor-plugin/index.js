@@ -4,13 +4,6 @@
   // 防止重复加载
   if (window.decapCmsVditorPlugin) return;
 
-  // 动态加载CSS文件
-  if (!document.querySelector('link[href*="vditor-plugin/style.css"]')) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = './vditor-plugin/style.css';
-    document.head.appendChild(link);
-  }
 
   // Slug工具类，用于处理slug相关的功能
   const SlugUtils = {
