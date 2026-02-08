@@ -18,7 +18,7 @@ export const siteConfig: SiteConfig = {
 	banner: {
 		enable: true,
 		src: "assets/images/121506026_p0.webp", // Relative to the /src directory. Relative to the /public directory if it starts with '/'
-		position: "center", // Equivalent to object-position, only supports 'top', 'center', 'bottom'. 'center' by default
+		position: "top", // Equivalent to object-position, only supports 'top', 'center', 'bottom'. 'center' by default
 		credit: {
 			enable: true, // Display the credit text of the banner image
 			text: "居然能找到这里来嘛，这里只是用来放笔记的图书馆哦~", // Credit text to be displayed
