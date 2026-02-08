@@ -43,8 +43,8 @@ const hasBannerLink = !!siteConfig.banner.credit.url;
 
 const shouldShowComments =
     showComments &&
-    (Astro.url.pathname.startsWith("/posts/") ||
-        Astro.url.pathname === "/about");
+    (decodeURIComponent(Astro.url.pathname).startsWith("/posts/") ||
+        decodeURIComponent(Astro.url.pathname) === "/about");
 
 const mainPanelTop = siteConfig.banner.enable
     ? `calc(${BANNER_HEIGHT}vh - ${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem)`
