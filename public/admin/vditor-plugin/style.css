@@ -1,217 +1,200 @@
-/* Vditor插件基础样式 */
-.vditor-full-container {
-    width   : 100%;
-    position: relative;
+/* Vditor 编辑器样式 */
+.toolbar__image-upload {
+  cursor: pointer;
 }
 
-.vditor-editor {
-    min-height   : 500px;
-    margin-bottom: 10px;
+.toolbar__image-upload:hover {
+  opacity: 0.8;
 }
 
 /* 上传面板样式 */
-.vditor-upload-panel {
-    border          : 1px solid #e1e4e8;
-    border-radius   : 6px;
-    padding         : 16px;
-    background-color: #f6f8fa;
-    margin-top      : 10px;
-    font-family     : -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+.upload-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 10000;
+  padding: 20px;
+  min-width: 400px;
+  max-width: 600px;
 }
 
-.vditor-upload-panel h4 {
-    margin-top   : 0;
-    margin-bottom: 12px;
-    color        : #24292f;
-    font-size    : 14px;
-    font-weight  : 600;
-    display      : flex;
-    align-items  : center;
+.upload-panel-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
 }
 
-.upload-doc-path {
-    font-size       : 12px;
-    color           : #586069;
-    margin-bottom   : 10px;
-    padding         : 4px 8px;
-    background-color: #fff;
-    border-radius   : 3px;
-    border          : 1px solid #e1e4e8;
-    word-break      : break-all;
+.upload-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
 }
 
-.upload-controls {
-    margin-bottom: 12px;
+.upload-panel-title {
+  font-size: 18px;
+  font-weight: bold;
+  color: #333;
+  margin: 0;
 }
 
-.upload-file-input {
-    display      : block;
-    width        : 100%;
-    margin-bottom: 8px;
-    padding      : 6px 8px;
-    border       : 1px solid #d1d5da;
-    border-radius: 4px;
-    font-size    : 13px;
+.upload-panel-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: #999;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.upload-file-hint {
-    font-size : 12px;
-    color     : #586069;
-    margin-top: 4px;
+.upload-panel-close:hover {
+  color: #333;
 }
 
-/* 预览区域样式 */
-.upload-preview-area {
-    max-height      : 200px;
-    overflow-y      : auto;
-    border          : 1px dashed #d1d5da;
-    border-radius   : 4px;
-    padding         : 8px;
-    margin-bottom   : 12px;
-    background-color: #fff;
+.upload-instructions {
+  margin: 15px 0;
+  color: #666;
+  line-height: 1.5;
 }
 
-.upload-preview-label {
-    font-size    : 12px;
-    color        : #586069;
-    margin-bottom: 4px;
-    font-weight  : 500;
+.upload-area {
+  border: 2px dashed #ccc;
+  border-radius: 6px;
+  padding: 30px;
+  text-align: center;
+  margin: 15px 0;
+  transition: border-color 0.3s;
 }
 
-.upload-preview-item {
-    display       : inline-block;
-    margin        : 4px;
-    text-align    : center;
-    vertical-align: top;
+.upload-area.dragover {
+  border-color: #007cba;
+  background-color: #f0f8ff;
 }
 
-.upload-preview-img {
-    max-width    : 60px;
-    max-height   : 60px;
-    display      : block;
-    border       : 1px solid #e1e4e8;
-    border-radius: 3px;
-    object-fit   : cover;
+.upload-area p {
+  margin: 0 0 15px 0;
+  color: #666;
 }
 
-.upload-preview-name {
-    width        : 60px;
-    font-size    : 10px;
-    overflow     : hidden;
-    text-overflow: ellipsis;
-    white-space  : nowrap;
-    margin-top   : 2px;
-    color        : #586069;
+.upload-btn {
+  background-color: #007cba;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-bottom: 15px;
 }
 
-/* 状态提示样式 */
+.upload-btn:hover {
+  background-color: #005a87;
+}
+
+.preview-container {
+  margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.preview-item:last-child {
+  border-bottom: none;
+}
+
+.preview-info {
+  display: flex;
+  align-items: center;
+}
+
+.preview-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  margin-right: 10px;
+  border-radius: 4px;
+}
+
+.preview-name {
+  font-size: 14px;
+  color: #333;
+}
+
+.preview-actions button {
+  background: none;
+  border: 1px solid #ddd;
+  padding: 4px 8px;
+  margin-left: 5px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.preview-actions button.remove-btn {
+  color: #e74c3c;
+}
+
+.preview-actions button.remove-btn:hover {
+  background-color: #fdf2f2;
+  border-color: #e74c3c;
+}
+
 .upload-status {
-    padding      : 8px;
-    margin-bottom: 12px;
-    border-radius: 4px;
-    font-size    : 13px;
-    font-weight  : 500;
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 4px;
+  text-align: center;
 }
 
-.upload-status-success {
-    background-color: #dafbe1;
-    border          : 1px solid #ace1af;
-    color           : #1a7f37;
+.upload-status.success {
+  background-color: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
 }
 
-.upload-status-error {
-    background-color: #ffebe9;
-    border          : 1px solid #ffc1c1;
-    color           : #cf222e;
+.upload-status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
 }
 
-.upload-status-warning {
-    background-color: #fff8c5;
-    border          : 1px solid #f0c23e;
-    color           : #9a6700;
+/* 加载指示器 */
+.loading-indicator {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255,255,255,.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
 }
 
-/* 按钮样式 */
-.upload-button-container {
-    display: flex;
-    gap    : 8px;
-}
-
-.upload-primary-button,
-.upload-secondary-button {
-    display        : flex;
-    align-items    : center;
-    justify-content: center;
-    padding        : 8px 16px;
-    border-radius  : 4px;
-    font-size      : 13px;
-    font-weight    : 500;
-    cursor         : pointer;
-    transition     : all 0.2s;
-    border         : none;
-    white-space    : nowrap;
-}
-
-.upload-primary-button {
-    flex            : 1;
-    background-color: #2da44e;
-    color           : white;
-}
-
-.upload-primary-button:hover {
-    background-color: #2c974b;
-}
-
-.upload-primary-button:disabled {
-    opacity: 0.6;
-    cursor : not-allowed;
-}
-
-.upload-secondary-button {
-    background-color: #f6f8fa;
-    color           : #24292f;
-    border          : 1px solid #d1d5da;
-}
-
-.upload-secondary-button:hover {
-    background-color: #eaeef2;
-}
-
-/* 上传提示 */
-.upload-hint {
-    font-size       : 12px;
-    color           : #57606a;
-    padding         : 6px;
-    background-color: #f6f8fa;
-    border          : 1px dashed #d0d7de;
-    border-radius   : 4px;
-    margin-top      : 8px;
-    cursor          : pointer;
-    transition      : background-color 0.2s;
-    display         : flex;
-    align-items     : center;
-}
-
-.upload-hint:hover {
-    background-color: #eaeef2;
-}
-
-/* 预览组件样式 */
-.vditor-preview {
-    padding         : 1rem;
-    min-height      : 200px;
-    font-size       : 14px;
-    line-height     : 1.6;
-    white-space     : pre-wrap;
-    background-color: #f6f8fa;
-    border          : 1px solid #e1e4e8;
-    border-radius   : 6px;
-    font-family     : -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-}
-
-/* Iconify图标调整 */
-iconify-icon {
-    display: inline-block;
-    width  : 1em;
-    height : 1em;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
