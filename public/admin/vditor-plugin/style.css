@@ -8,7 +8,7 @@
 }
 
 /* 上传面板样式 */
-.upload-panel {
+.vditor-upload-panel {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -23,97 +23,29 @@
   max-width: 600px;
 }
 
-.upload-panel-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-}
-
-.upload-panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #eee;
-}
-
-.upload-panel-title {
-  font-size: 18px;
-  font-weight: bold;
-  color: #333;
-  margin: 0;
-}
-
-.upload-panel-close {
-  background: none;
-  border: none;
-  font-size: 20px;
-  cursor: pointer;
-  color: #999;
-  padding: 0;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.upload-panel-close:hover {
-  color: #333;
-}
-
-.upload-instructions {
+.upload-hint {
   margin: 15px 0;
   color: #666;
   line-height: 1.5;
 }
 
-.upload-area {
-  border: 2px dashed #ccc;
-  border-radius: 6px;
-  padding: 30px;
-  text-align: center;
+.file-input-container {
   margin: 15px 0;
-  transition: border-color 0.3s;
 }
 
-.upload-area.dragover {
-  border-color: #007cba;
-  background-color: #f0f8ff;
+.file-hint {
+  margin: 10px 0;
+  color: #888;
+  font-size: 0.9em;
 }
 
-.upload-area p {
-  margin: 0 0 15px 0;
-  color: #666;
-}
-
-.upload-btn {
-  background-color: #007cba;
-  color: white;
-  border: none;
-  padding: 10px 20px;
+.doc-path {
+  margin: 10px 0;
+  padding: 8px;
+  background-color: #f5f5f5;
   border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  margin-bottom: 15px;
-}
-
-.upload-btn:hover {
-  background-color: #005a87;
-}
-
-.preview-container {
-  margin-top: 20px;
-  max-height: 300px;
-  overflow-y: auto;
-  border: 1px solid #eee;
-  border-radius: 4px;
-  padding: 10px;
+  font-family: monospace;
+  word-break: break-all;
 }
 
 .preview-item {
@@ -146,23 +78,78 @@
   color: #333;
 }
 
-.preview-actions button {
-  background: none;
-  border: 1px solid #ddd;
-  padding: 4px 8px;
-  margin-left: 5px;
-  border-radius: 3px;
+.preview-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.preview-item:last-child {
+  border-bottom: none;
+}
+
+.preview-image {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  margin-right: 10px;
+  border-radius: 4px;
+}
+
+.preview-name {
+  font-size: 14px;
+  color: #333;
+}
+
+.preview-area {
+  margin-top: 20px;
+  max-height: 300px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 10px;
+}
+
+.button-container {
+  margin-top: 20px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.primary-button {
+  background-color: #007cba;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 14px;
 }
 
-.preview-actions button.remove-btn {
-  color: #e74c3c;
+.primary-button:hover {
+  background-color: #005a87;
 }
 
-.preview-actions button.remove-btn:hover {
-  background-color: #fdf2f2;
-  border-color: #e74c3c;
+.primary-button.disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  background-color: #f0f0f0;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.secondary-button:hover {
+  background-color: #e0e0e0;
 }
 
 .upload-status {
@@ -182,6 +169,12 @@
   background-color: #f8d7da;
   color: #721c24;
   border: 1px solid #f5c6cb;
+}
+
+.upload-status.loading {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
 }
 
 /* 加载指示器 */
