@@ -23,6 +23,7 @@ interface Props {
     lang?: string;
     setOGTypeArticle?: boolean;
     headings?: MarkdownHeading[];
+    showComments?: boolean;
 }
 
 const {
@@ -32,10 +33,18 @@ const {
     lang,
     setOGTypeArticle,
     headings = [],
+    showComments = false,
 } = Astro.props;
+
 const hasBannerCredit =
     siteConfig.banner.enable && siteConfig.banner.credit.enable;
+
 const hasBannerLink = !!siteConfig.banner.credit.url;
+
+const shouldShowComments =
+    showComments &&
+    (Astro.url.pathname.startsWith("/posts/") ||
+        Astro.url.pathname === "/about");
 
 const mainPanelTop = siteConfig.banner.enable
     ? `calc(${BANNER_HEIGHT}vh - ${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem)`
@@ -152,7 +161,7 @@ const mainPanelTop = siteConfig.banner.enable
                         <!-- make id different from windows.swup global property -->
                         <slot />
 
-                        <Giscus />
+                        {shouldShowComments && <Giscus />}
 
                         <div
                             class="footer col-span-2 onload-animation hidden lg:block"
