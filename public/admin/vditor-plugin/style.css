@@ -220,6 +220,11 @@
   direction: ltr;
   background: #fff;
   color: #fff;
+  animation: slideInRight 0.3s ease-out;
+}
+
+.vditor-toast.fade-out {
+  animation: fadeOut 0.3s ease-out;
 }
 
 .Toastify__toast--success {
@@ -258,4 +263,24 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }

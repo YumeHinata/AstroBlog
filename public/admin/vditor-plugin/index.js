@@ -31,7 +31,12 @@
     
     closeButton.onclick = () => {
       if (container.contains(toast)) {
-        container.removeChild(toast);
+        toast.classList.add('fade-out');
+        setTimeout(() => {
+          if (container.contains(toast)) {
+            container.removeChild(toast);
+          }
+        }, 300);
       }
     };
     
@@ -42,7 +47,12 @@
     // 自动移除toast
     const timer = setTimeout(() => {
       if (container.contains(toast)) {
-        container.removeChild(toast);
+        toast.classList.add('fade-out');
+        setTimeout(() => {
+          if (container.contains(toast)) {
+            container.removeChild(toast);
+          }
+        }, 300);
       }
     }, duration);
   }
