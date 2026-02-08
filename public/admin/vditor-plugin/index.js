@@ -78,16 +78,53 @@
 
   // 合并媒体文件到主分支的函数
   async function mergeMediaToMain() {
-    if (!ImageUploadManager.uploadedButUncommitted || ImageUploadManager.uploadedButUncommitted.size === 0) {
-      // 没有未提交的图片，无需合并
-      return;
-    }
-
+    // 检查媒体分支是否存在
+    const token = ImageUploadManager.getToken();
+    const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
+    
     try {
-      const token = ImageUploadManager.getToken();
-      const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
-
-      // 尝试将媒体分支合并到主分支
+      // 检查媒体分支是否存在
+      const branchCheckUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/branches/${mediaBranch}`;
+      const branchCheckRes = await fetch(branchCheckUrl, {
+        headers: { Authorization: `token ${token}` }
+      });
+      
+      if (branchCheckRes.status === 404) {
+        // 媒体分支不存在，无需合并
+        console.log('媒体分支不存在，无需合并');
+        return;
+      } else if (!branchCheckRes.ok) {
+        const errorData = await branchCheckRes.text();
+        console.error(`检查分支状态失败: ${branchCheckRes.status}, ${errorData}`);
+        return;
+      }
+      
+      // 检查媒体分支中是否包含当前文章的图片
+      const currentSlug = ImageUploadManager.getCurrentSlug();
+      if (!currentSlug) {
+        console.log('无法获取当前文章slug，无法检查对应图片');
+        return;
+      }
+      
+      const mediaPath = `src/content/posts/images/${currentSlug}/`;
+      const contentsCheckUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${mediaPath}?ref=${mediaBranch}`;
+      const contentsCheckRes = await fetch(contentsCheckUrl, {
+        headers: { Authorization: `token ${token}` }
+      });
+      
+      if (contentsCheckRes.status === 404) {
+        // 当前文章的图片目录不存在，无需合并
+        console.log(`当前文章(${currentSlug})的图片目录不存在，无需合并`);
+        return;
+      } else if (!contentsCheckRes.ok) {
+        const errorData = await contentsCheckRes.text();
+        console.error(`检查内容失败: ${contentsCheckRes.status}, ${errorData}`);
+        return;
+      }
+      
+      // 如果媒体分支存在且包含当前文章的图片，则执行合并
+      console.log('开始合并媒体分支到主分支...');
+      
       const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
         method: 'POST',
         headers: {
@@ -97,11 +134,12 @@
         body: JSON.stringify({
           base: mainBranch,
           head: mediaBranch,
-          commit_message: '[Auto] Merge media assets to main'
+          commit_message: `[Auto] Merge media assets for ${currentSlug} to main`
         })
       });
 
       if (mergeRes.ok) {
+        console.log('成功将媒体分支合并到主分支');
         showToast('✅ 成功将媒体分支合并到主分支', 'success');
         
         // 合并成功后删除媒体分支
@@ -116,6 +154,7 @@
           });
 
           if (deleteRes.ok) {
+            console.log('成功删除媒体分支');
             showToast('🗑️ 成功删除媒体分支', 'info');
           } else {
             const errorData = await deleteRes.text();
