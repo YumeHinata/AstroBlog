@@ -2,7 +2,7 @@
 title: 【笔记】Fuwari主题下的DecapCMS编辑器替换
 published: 2026-02-08
 description: Fuwari的资源优化功能对编辑器的影响太大了，直到现在也无法十全十美
-image: https://rdimg.yumehinata.com/random-wallpaper
+image: https://pximg.yumehinata.com/img-original/img/2024/09/21/08/02/53/122626279_p0.png
 tags:
   - Astro
   - Fuwari
