@@ -99,30 +99,7 @@
         return;
       }
       
-      // 检查媒体分支中是否包含当前文章的图片
-      const currentSlug = ImageUploadManager.getCurrentSlug();
-      if (!currentSlug) {
-        console.log('无法获取当前文章slug，无法检查对应图片');
-        return;
-      }
-      
-      const mediaPath = `src/content/posts/images/${currentSlug}/`;
-      const contentsCheckUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/contents/${mediaPath}?ref=${mediaBranch}`;
-      const contentsCheckRes = await fetch(contentsCheckUrl, {
-        headers: { Authorization: `token ${token}` }
-      });
-      
-      if (contentsCheckRes.status === 404) {
-        // 当前文章的图片目录不存在，无需合并
-        console.log(`当前文章(${currentSlug})的图片目录不存在，无需合并`);
-        return;
-      } else if (!contentsCheckRes.ok) {
-        const errorData = await contentsCheckRes.text();
-        console.error(`检查内容失败: ${contentsCheckRes.status}, ${errorData}`);
-        return;
-      }
-      
-      // 如果媒体分支存在且包含当前文章的图片，则执行合并
+      // 如果媒体分支存在，则执行合并
       console.log('开始合并媒体分支到主分支...');
       
       const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
@@ -134,7 +111,7 @@
         body: JSON.stringify({
           base: mainBranch,
           head: mediaBranch,
-          commit_message: `[Auto] Merge media assets for ${currentSlug} to main`
+          commit_message: '[Auto] Merge media assets to main'
         })
       });
 
