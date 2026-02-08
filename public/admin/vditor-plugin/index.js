@@ -4,8 +4,50 @@
   // 防止重复加载
   if (window.decapCmsVditorPlugin) return;
 
+  // 动态加载CSS文件
+  if (!document.querySelector('link[href*="vditor-plugin/style.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = './vditor-plugin/style.css';
+    document.head.appendChild(link);
+  }
+
+  // Slug工具类，用于处理slug相关的功能
+  const SlugUtils = {
+    // 从URL中提取slug
+    extractSlugFromUrl() {
+      const url = window.location.href;
+      try {
+        // 提取URL中的slug部分，例如从 https://www.yumehinata.com/admin#/collections/terminal/entries/slug
+        const match = url.match(/\/entries\/([^\/\?#]+)/);
+        if (match && match[1]) {
+          const decodedSlug = decodeURIComponent(match[1]); // 解码URL编码的slug
+          // 检查是否是有效的slug格式（不是特殊占位符或无法解码的内容）
+          if(decodedSlug && decodedSlug !== 'new' && decodedSlug !== 'create' && decodedSlug !== 'default') {
+            return decodedSlug;
+          }
+        }
+      } catch (e) {
+        console.error('无法从URL中提取slug:', e);
+      }
+      return null; // 返回null表示无法获取有效slug
+    },
+
+    // 获取当前文档的slug，如果无法获取则抛出错误
+    getCurrentSlug() {
+      const slug = this.extractSlugFromUrl();
+      
+      if(!slug) {
+        throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
+      }
+      
+      // 保留字母、数字、中文、连字符、下划线，替换其他特殊字符为下划线
+      return slug.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_');
+    }
+  };
+
   // 全局变量用于存储待提交的图片
-  window.pendingMediaFiles = [];
+  let pendingMediaFiles = [];
 
   const ImageUploadManager = {
     pendingImages: [],
@@ -36,66 +78,23 @@
       }
     },
 
-    // 从URL中提取slug
-    extractSlugFromUrl() {
-      const url = window.location.href;
-      try {
-        // 提取URL中的slug部分，例如从 https://www.yumehinata.com/admin#/collections/terminal/entries/slug
-        const match = url.match(/\/entries\/([^\/\?#]+)/);
-        if (match && match[1]) {
-          const decodedSlug = decodeURIComponent(match[1]); // 解码URL编码的slug
-          // 检查是否是有效的slug格式（不是特殊占位符或无法解码的内容）
-          if(decodedSlug && decodedSlug !== 'new' && decodedSlug !== 'create' && decodedSlug !== 'default') {
-            return decodedSlug;
-          }
-        }
-      } catch (e) {
-        console.error('无法从URL中提取slug:', e);
-      }
-      return null; // 返回null表示无法获取有效slug
-    },
+    // 使用SlugUtils来获取slug
+    extractSlugFromUrl: SlugUtils.extractSlugFromUrl,
 
-    // 从编辑器内容或CMS数据中尝试获取标题并生成slug
-    getTitleBasedSlug() {
-      try {
-        // 尝试从CMS的活动条目获取标题
-        if(window.CMS?.activeEntry?.data) {
-          const title = window.CMS.activeEntry.data.title;
-          if(title) {
-            // 简单的标题到slug转换
-            return title.toLowerCase()
-              .replace(/[^\w\u4e00-\u9fff\s-]/g, '')  // 保留中文、英文字母、数字、空格和连字符
-              .trim()
-              .replace(/\s+/g, '-');  // 空格替换为连字符
-          }
-        }
-      } catch(e) {
-        console.error('无法从CMS数据中生成slug:', e);
-      }
-      return null;
-    },
+    getCurrentSlug: SlugUtils.getCurrentSlug,
 
     calculatePaths(filename) {
       const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
       
-      // 尝试获取slug，如果获取不到则尝试从标题生成，否则抛出错误
-      let slug = this.extractSlugFromUrl();
-      if(!slug) {
-        slug = this.getTitleBasedSlug();
-      }
-      
-      if(!slug) {
-        throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
-      }
+      // 获取当前文档的slug
+      const slug = this.getCurrentSlug();
       
       // 保留字母、数字、中文、连字符、下划线和点，替换其他特殊字符为下划线
       const safeFilename = filename.replace(/[^a-zA-Z0-9\u4e00-\u9fa5._-]/g, '_');
-      // 对slug也做同样处理，保留中文字符
-      const safeSlug = slug.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_');
       
       // 在post目录下的images子目录中创建以slug命名的子目录存放图片
-      const pathInRepo = `${mediaFolder}/images/${safeSlug}/${safeFilename}`;
-      const markdownPath = `./images/${safeSlug}/${safeFilename}`;
+      const pathInRepo = `${mediaFolder}/images/${slug}/${safeFilename}`;
+      const markdownPath = `./images/${slug}/${safeFilename}`;
       return { pathInRepo, markdownPath };
     },
 
@@ -171,7 +170,7 @@
             // 文件不存在，执行上传
             const content = await this.fileToBase64(img.file);
 
-            // 上传到媒体分支
+            // 上传到媒体分支 - 现在commitMediaFile会自己处理文件存在性检查
             await this.commitMediaFile(token, repoOwner, repoName, pathInRepo, content, mediaBranch, img.name, commitCfg);
 
             results.success++;
@@ -209,8 +208,29 @@
 
 
     // 提交单个媒体文件到GitHub
-    async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg, sha) {
-      // 使用原始路径，让fetch自动处理编码
+    async commitMediaFile(token, owner, repo, path, content, branch, filename, commitCfg) {
+      // 首先检查文件是否已存在
+      const checkUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+      let sha = null;
+      
+      try {
+        const checkRes = await fetch(checkUrl, {
+          headers: { Authorization: `token ${token}` }
+        });
+        
+        if (checkRes.ok) {
+          // 文件已存在，获取SHA
+          const fileInfo = await checkRes.json();
+          sha = fileInfo.sha;
+          console.log(`文件已存在: ${path}，将被更新`);
+        }
+        // 如果文件不存在，checkRes.status 会是 404，我们将继续创建新文件
+      } catch (error) {
+        console.error(`检查文件是否存在时出错: ${error.message}`);
+        // 如果检查失败，继续上传新文件
+      }
+      
+      // 构建API URL和请求体
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const body = {
         message: `${commitCfg.commitPrefix}${filename}`,
@@ -420,13 +440,9 @@
       
       // 尝试从URL中获取当前文档路径
       try {
-        const url = window.location.href;
-        const match = url.match(/\/entries\/([^\/\?#]+)/);
-        if (match && match[1]) {
-          const slug = decodeURIComponent(match[1]);
-          if (slug && slug !== 'new' && slug !== 'create') {
-            return `src/content/posts/${slug}.md`;
-          }
+        const slug = SlugUtils.extractSlugFromUrl();
+        if (slug) {
+          return `src/content/posts/${slug}.md`;
         }
       } catch (e) {
         console.error('无法从URL中确定文档路径:', e);
@@ -437,7 +453,6 @@
 
     initVditor() {
       try {
-        // 初始化Vditor时添加自定义渲染规则，用于在预览时替换图片URL为CDN链接
         this.vditor = new Vditor(this.props.forID, {
           height: 500,
           value: this.state.value,
@@ -447,50 +462,6 @@
           input: (value) => {
             this.setState({ value });
             this.props.onChange(value);
-          },
-          // 添加自定义渲染规则
-          preview: {
-            hljs: {
-              enable: true,
-              style: 'github',
-            },
-            markdown: {
-              renderer: (mathBlock, previewElement) => {
-                // 在预览区域渲染图片时，将相对路径替换为CDN链接
-                const images = previewElement.querySelectorAll('img');
-                images.forEach(img => {
-                  if (img.src.startsWith('./images/')) {
-                    // 从当前文档路径提取slug
-                    const currentPath = this.getCurrentDocPath();
-                    
-                    // 从文档路径中提取slug，例如从 src/content/posts/test-post.md 中提取 test-post
-                    let slug = null;
-                    if (currentPath && currentPath.includes('/')) {
-                      const pathParts = currentPath.split('/');
-                      
-                      // 如果是形如 src/content/posts/[slug].md 的路径
-                      if (pathParts.length >= 4 && pathParts[pathParts.length - 1].endsWith('.md')) {
-                        slug = pathParts[pathParts.length - 1].slice(0, -3); // 移除 .md 后缀
-                      }
-                    }
-                    
-                    if (slug) {
-                      // 从图片路径中提取文件名部分
-                      const imageMatch = img.src.match(/^\.\/images\/([^\/]+)\/(.+)$/);
-                      if (imageMatch) {
-                        const imgSlug = imageMatch[1];  // 从路径中提取的slug部分
-                        const filename = imageMatch[2]; // 文件名部分
-                        img.src = ImageUploadManager.getCdnUrl(imgSlug, filename);
-                      } else {
-                        // 如果路径格式不匹配，尝试直接处理
-                        const filename = img.src.substring('./images/'.length);
-                        img.src = ImageUploadManager.getCdnUrl(slug, filename);
-                      }
-                    }
-                  }
-                });
-              }
-            }
           }
         });
 
@@ -872,13 +843,4 @@
     };
     checkVditor();
   }
-})();
-
-// 动态加载CSS文件
-(function loadStyles() {
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.type = 'text/css';
-  link.href = '/admin/vditor-plugin/style.css';
-  document.head.appendChild(link);
 })();
