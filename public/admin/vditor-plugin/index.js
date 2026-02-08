@@ -1,9 +1,87 @@
 (function () {
   'use strict';
-  
   // 防止重复加载
   if (window.decapCmsVditorPlugin) return;
 
+  // 创建一个模拟Toastify的通知函数
+  function showToast(message, type = 'info', duration = 3000) {
+    // 检查是否已有Toastify容器，如果没有则创建
+    let container = document.querySelector('.Toastify');
+    if (!container) {
+      container = document.createElement('div');
+      container.className = 'Toastify';
+      // 默认放置在右上角
+      container.style.cssText = `
+        position: fixed;
+        top: 1em;
+        right: 1em;
+        z-index: 9999;
+        padding: 4px;
+        width: 320px;
+        box-sizing: border-box;
+      `;
+      document.body.appendChild(container);
+    }
+
+    // 创建toast元素
+    const toast = document.createElement('div');
+    toast.className = `Toastify__toast Toastify__toast-theme--colored Toastify__toast--${type}`;
+    
+    // 根据类型设置背景色
+    const bgColorMap = {
+      'success': 'var(--toastify-color-success)',
+      'error': 'var(--toastify-color-error)',
+      'warning': 'var(--toastify-color-warning)',
+      'info': 'var(--toastify-color-info)'
+    };
+    
+    toast.style.cssText = `
+      position: relative;
+      min-height: var(--toastify-toast-min-height);
+      box-sizing: border-box;
+      margin-bottom: 1rem;
+      padding: 8px;
+      border-radius: 4px;
+      box-shadow: 0 1px 10px 0 rgba(0,0,0,.1), 0 2px 15px 0 rgba(0,0,0,.05);
+      display: flex;
+      justify-content: space-between;
+      max-height: var(--toastify-toast-max-height);
+      overflow: hidden;
+      font-family: var(--toastify-font-family);
+      cursor: default;
+      direction: ltr;
+      z-index: 0;
+      background: ${bgColorMap[type] || 'var(--toastify-color-light)'};
+      color: ${type === 'success' || type === 'error' || type === 'warning' || type === 'info' 
+        ? 'var(--toastify-text-color-' + type + ')' 
+        : 'var(--toastify-text-color-light)'};
+    `;
+
+    // 添加内容
+    const body = document.createElement('div');
+    body.className = 'Toastify__toast-body';
+    body.innerHTML = `<div>${message.replace(/\n/g, '<br>')}</div>`;
+    
+    toast.appendChild(body);
+
+    // 添加关闭按钮
+    const closeButton = document.createElement('button');
+    closeButton.className = 'Toastify__close-button';
+    closeButton.innerHTML = '&times;';
+    closeButton.onclick = () => {
+      container.removeChild(toast);
+    };
+    toast.appendChild(closeButton);
+
+    container.appendChild(toast);
+
+    // 自动移除toast
+    setTimeout(() => {
+      if (container.contains(toast)) {
+        container.removeChild(toast);
+      }
+    }, duration);
+  }
 
   // Slug工具类，用于处理slug相关的功能
   const SlugUtils = {
@@ -16,7 +94,7 @@
         if (match && match[1]) {
           const decodedSlug = decodeURIComponent(match[1]); // 解码URL编码的slug
           // 检查是否是有效的slug格式（不是特殊占位符或无法解码的内容）
-          if(decodedSlug && decodedSlug !== 'new' && decodedSlug !== 'create' && decodedSlug !== 'default') {
+          if (decodedSlug && decodedSlug !== 'new' && decodedSlug !== 'create' && decodedSlug !== 'default') {
             return decodedSlug;
           }
         }
@@ -29,11 +107,13 @@
     // 获取当前文档的slug，如果无法获取则抛出错误
     getCurrentSlug() {
       const slug = this.extractSlugFromUrl();
-      
-      if(!slug) {
+
+      if (!slug) {
+        // 使用自定义通知而不是直接抛出错误（虽然仍需抛出以中断流程）
+        // 但在抛出前显示通知
+        showToast('无法确定文章标识符，请先保存文章标题后再上传图片', 'error', 4000);
         throw new Error('无法确定文章标识符，请先保存文章标题后再上传图片');
       }
-      
       // 保留字母、数字、中文、连字符、下划线，替换其他特殊字符为下划线
       return slug.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_-]/g, '_');
     }
@@ -78,13 +158,13 @@
 
     calculatePaths(filename) {
       const mediaFolder = this.config.mediaFolder.replace(/^\//, '');
-      
+
       // 获取当前文档的slug
       const slug = this.getCurrentSlug();
-      
+
       // 保留字母、数字、中文、连字符、下划线和点，替换其他特殊字符为下划线
       const safeFilename = filename.replace(/[^a-zA-Z0-9\u4e00-\u9fa5._-]/g, '_');
-      
+
       // 在post目录下的images子目录中创建以slug命名的子目录存放图片
       const pathInRepo = `${mediaFolder}/images/${slug}/${safeFilename}`;
       const markdownPath = `./images/${slug}/${safeFilename}`;
@@ -115,13 +195,12 @@
       if (this.isUploading) throw new Error('上传正在进行中');
 
       this.isUploading = true;
-      
+
       // 在开始上传前验证能否获取到slug
       try {
         this.calculatePaths('test.jpg'); // 只是为了验证能否成功计算路径
-        console.log("路径计算成功"); // 调试日志
-      } catch(error) {
-        console.error("路径计算失败:", error); // 调试日志
+      } catch (error) {
+        console.error("路径计算失败:", error);
         throw new Error(error.message);
       }
 
@@ -137,7 +216,6 @@
 
         for (const img of this.pendingImages) {
           try {
-            console.log("处理图片:", img.name); // 调试日志
             const { pathInRepo, markdownPath } = this.calculatePaths(img.name);
 
             // 检查文件是否已存在
@@ -145,16 +223,15 @@
             const checkRes = await fetch(checkUrl, {
               headers: { Authorization: `token ${token}` }
             });
-            
+
             if (checkRes.ok) {
               // 文件已存在，直接使用现有文件
-              console.log(`文件已存在: ${pathInRepo}，使用现有文件`);
               results.success++;
               results.markdowns.push(`![${img.name}](${markdownPath})`);
-              
+
               // 添加到已上传集合，但不实际上传
               this.uploadedButUncommitted.add(pathInRepo);
-              
+
               // 释放预览URL
               URL.revokeObjectURL(img.previewUrl);
               continue; // 跳过上传步骤
@@ -168,13 +245,13 @@
 
             results.success++;
             results.markdowns.push(`![${img.name}](${markdownPath})`);
-            
+
             this.uploadedButUncommitted.add(pathInRepo);
-            
+
             // 释放预览URL
             URL.revokeObjectURL(img.previewUrl);
           } catch (error) {
-            console.error("处理图片出错:", img.name, error); // 调试日志
+            console.error("处理图片出错:", img.name, error);
             results.errors.push(`${img.name}: ${error.message}`);
           }
         }
@@ -186,13 +263,15 @@
 
         if (results.errors.length > 0) {
           console.error('以下图片上传失败:', results.errors);
-          alert(`部分图片上传失败:\n${results.errors.join('\n')}\n\n但已成功上传的图片已插入编辑器。`);
+          
+          // 使用自定义的Toastify样式通知
+          showToast(`部分图片上传失败:\n${results.errors.join('\n')}\n\n但已成功上传的图片已插入编辑器。`, 'error', 5000);
         } else if(results.success > 0){
-          alert(`✅ 成功处理 ${results.success} 张图片到媒体库`);
+          // 使用自定义的Toastify样式通知
+          showToast(`✅ 成功处理 ${results.success} 张图片到媒体库`, 'success');
         }
 
         this.pendingImages = [];
-        console.log("上传完成，成功:", results.success, "错误:", results.errors.length); // 调试日志
         return results;
       } finally {
         this.isUploading = false;
@@ -205,24 +284,23 @@
       // 首先检查文件是否已存在
       const checkUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
       let sha = null;
-      
+
       try {
         const checkRes = await fetch(checkUrl, {
           headers: { Authorization: `token ${token}` }
         });
-        
+
         if (checkRes.ok) {
           // 文件已存在，获取SHA
           const fileInfo = await checkRes.json();
           sha = fileInfo.sha;
-          console.log(`文件已存在: ${path}，将被更新`);
         }
         // 如果文件不存在，checkRes.status 会是 404，我们将继续创建新文件
       } catch (error) {
         console.error(`检查文件是否存在时出错: ${error.message}`);
         // 如果检查失败，继续上传新文件
       }
-      
+
       // 构建API URL和请求体
       const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const body = {
@@ -252,10 +330,10 @@
         console.error(`GitHub API错误详情: ${errorData}`);
         console.error(`请求URL: ${url}`);
         console.error(`路径原始值: ${path}`);
-        console.error(`请求体: ${JSON.stringify({message: body.message, contentLength: content.length, branch: body.branch}, null, 2)}`);
+        console.error(`请求体: ${JSON.stringify({ message: body.message, contentLength: content.length, branch: body.branch }, null, 2)}`);
         throw new Error(`GitHub API错误: ${res.status}, ${errorData}`);
       }
-      
+
       // 成功上传后返回数据
       return await res.json();
     },
@@ -270,11 +348,9 @@
 
       if (branchCheckRes.ok) {
         // 分支已存在
-        console.log(`分支已存在: ${mediaBranch}`);
         return;
       } else if (branchCheckRes.status === 404) {
         // 分支不存在，需要创建
-        console.log(`分支不存在，正在创建: ${mediaBranch}`);
 
         // 获取主分支信息
         const mainBranchName = this.config.branch;
@@ -308,8 +384,6 @@
           const errorData = await createRes.text();
           throw new Error(`创建分支失败: ${createRes.status}, ${errorData}`);
         }
-
-        console.log(`成功创建分支: ${mediaBranch}`);
       } else {
         const errorData = await branchCheckRes.text();
         throw new Error(`检查分支状态失败: ${branchCheckRes.status}, ${errorData}`);
@@ -321,11 +395,11 @@
       if (window.CMS?.localBackend) {
         return this.config.branch;
       }
-      
+
       if (window.CMS?.activeEntry) {
         return this.config.branch;
       }
-      
+
       return this.config.branch;
     },
 
@@ -337,7 +411,7 @@
       if (branch) {
         url += `?ref=${branch}`;
       }
-      
+
       const res = await fetch(url, { headers: { Authorization: `token ${token}` } });
       return res.status === 200 ? await res.json() : null;
     },
@@ -365,7 +439,7 @@
       this.initVditor();
       this.pathCheckInterval = setInterval(() => this.checkDocPath(), 2000);
     },
-    
+
     // 在props中提供的控件方法中处理提交前逻辑
     control: {
       // 这个方法将在外部调用，当需要提交内容时
@@ -376,16 +450,16 @@
             const token = ImageUploadManager.getToken();
             const { repoOwner, repoName, mediaBranch } = ImageUploadManager.config; // 使用媒体分支
             const contentBranch = ImageUploadManager.getCurrentContentBranch();
-            
+
             // 提交所有待处理的媒体文件到媒体分支
             for (const mediaFile of pendingMediaFiles) {
               try {
                 await this.commitMediaFile(
-                  token, 
-                  repoOwner, 
-                  repoName, 
-                  mediaFile.path, 
-                  mediaFile.content, 
+                  token,
+                  repoOwner,
+                  repoName,
+                  mediaFile.path,
+                  mediaFile.content,
                   mediaBranch, // 使用媒体分支
                   mediaFile.filename,
                   ImageUploadManager.commitConfig,
@@ -395,7 +469,7 @@
                 console.error('提交媒体文件失败:', error);
               }
             }
-            
+
             // 清空待提交列表
             pendingMediaFiles = [];
           } catch (error) {
@@ -404,12 +478,12 @@
         }
       }
     },
-    
+
 
     componentWillUnmount() {
       // 清除定时器
       clearInterval(this.pathCheckInterval);
-      
+
       // 由于我们使用全局hashchange监听器，不需要在组件中移除
       if (this.vditor) this.vditor.destroy();
       ImageUploadManager.cleanupPreviews();
@@ -430,7 +504,7 @@
       if (this.props.entry?.path) {
         return decodeURIComponent(this.props.entry.path);
       }
-      
+
       // 尝试从URL中获取当前文档路径
       try {
         const slug = SlugUtils.extractSlugFromUrl();
@@ -440,7 +514,7 @@
       } catch (e) {
         console.error('无法从URL中确定文档路径:', e);
       }
-      
+
       return '无法确定当前文档路径';
     },
 
@@ -500,8 +574,7 @@
 
     async handleUpload() {
       const pendingCount = ImageUploadManager.pendingImages.length;
-      console.log("待上传图片数量:", pendingCount); // 调试日志
-      
+
       if (pendingCount === 0) {
         this.setState({ uploadStatus: '请先选择图片' });
         return;
@@ -513,31 +586,38 @@
       });
 
       try {
-        console.log("开始上传..."); // 调试日志
         const result = await ImageUploadManager.uploadAll(this.vditor);
-        console.log("上传结果:", result); // 调试日志
 
         if (result.success > 0) {
           this.setState({
             uploadStatus: `✅ 上传完成！成功 ${result.success}/${pendingCount} 张`
           });
           setTimeout(() => this.setState({ uploadStatus: null }), 5000);
+          
+          // 显示成功通知
+          showToast(`✅ 成功上传 ${result.success} 张图片`, 'success');
         } else {
           this.setState({
             uploadStatus: '上传失败，请查看控制台',
             showUploadPanel: true
           });
+          
+          // 显示失败通知
+          showToast('❌ 图片上传失败，请重试', 'error');
         }
 
         if (result.errors.length > 0) {
           console.error('上传错误:', result.errors);
         }
       } catch (error) {
-        console.error('上传过程出错:', error); // 输出完整的错误信息
+        console.error('上传过程出错:', error); // 保留错误信息到控制台
         this.setState({
           uploadStatus: `错误: ${error.message}`,
           showUploadPanel: true
         });
+        
+        // 显示错误通知
+        showToast(`❌ 上传出错: ${error.message}`, 'error', 5000);
       }
     },
 
@@ -547,7 +627,9 @@
         uploadStatus: '已清空暂存图片',
         showUploadPanel: false
       });
-      setTimeout(() => this.setState({ uploadStatus: null }), 2000);
+      
+      // 显示清空成功的通知
+      showToast('🗑️ 已清空暂存图片', 'info');
     },
 
     render() {
@@ -674,12 +756,12 @@
         control: VditorControl,
         preview: VditorPreview,
         // 添加一个方法用于在提交前处理媒体文件
-        beforeSubmit: async function(entry) {
+        beforeSubmit: async function (entry) {
           if (window.vditorInstance && window.vditorInstance.getValue) {
             // 更新entry中的内容
             entry.set(window.vditorInstance.getValue());
           }
-          
+
           // 处理待提交的媒体文件
           if (pendingMediaFiles.length > 0) {
             try {
@@ -687,17 +769,17 @@
               const token = ImageUploadManager.getToken();
               const { repoOwner, repoName, mediaBranch } = ImageUploadManager.config; // 使用媒体分支
               const contentBranch = ImageUploadManager.getCurrentContentBranch();
-              
+
               // 提交所有待处理的媒体文件到媒体分支
               for (const mediaFile of pendingMediaFiles) {
                 try {
                   await VditorControl.prototype.commitMediaFile.call(
                     { commitMediaFile: VditorControl.prototype.commitMediaFile }, // 为调用提供上下文
-                    token, 
-                    repoOwner, 
-                    repoName, 
-                    mediaFile.path, 
-                    mediaFile.content, 
+                    token,
+                    repoOwner,
+                    repoName,
+                    mediaFile.path,
+                    mediaFile.content,
                     mediaBranch, // 使用媒体分支
                     mediaFile.filename,
                     ImageUploadManager.commitConfig,
@@ -707,21 +789,18 @@
                   console.error('提交媒体文件失败:', error);
                 }
               }
-              
+
               // 清空待提交列表
               pendingMediaFiles = [];
             } catch (error) {
               console.error('处理媒体文件时出错:', error);
             }
           }
-          
-          // 注意：在这里我们不合并分支，因为这会在每次保存时触发
-          // 我们只在发布时合并分支，因此这部分留空
         }
       };
-      
+
       window.CMS.registerWidget('vditor', widget.control, widget.preview);
-      
+
       // 添加beforeSubmit处理器到全局，供CMS调用
       if (window.CMS_EVENTS) {
         window.CMS_EVENTS.beforeSubmit = widget.beforeSubmit;
@@ -768,13 +847,13 @@
       console.log('没有未提交的图片，无需合并媒体分支');
       return;
     }
-    
+
     try {
       const token = ImageUploadManager.getToken();
       const { repoOwner, repoName, branch: mainBranch, mediaBranch } = ImageUploadManager.config;
-      
+
       console.log('开始合并媒体分支到主分支...');
-      
+
       // 尝试将媒体分支合并到主分支
       const mergeRes = await fetch(`https://api.github.com/repos/${repoOwner}/${repoName}/merges`, {
         method: 'POST',
@@ -788,14 +867,15 @@
           commit_message: '[Auto] Merge media assets to main'
         })
       });
-      
+
       if (mergeRes.ok) {
         console.log('成功将媒体分支合并到主分支');
+        showToast('✅ 成功将媒体分支合并到主分支', 'success');
         
         // 合并成功后删除媒体分支
         try {
           const deleteUrl = `https://api.github.com/repos/${repoOwner}/${repoName}/git/refs/heads/${mediaBranch}`;
-          
+
           const deleteRes = await fetch(deleteUrl, {
             method: 'DELETE',
             headers: {
@@ -805,6 +885,7 @@
 
           if (deleteRes.ok) {
             console.log('成功删除媒体分支');
+            showToast('🗑️ 成功删除媒体分支', 'info');
           } else {
             const errorData = await deleteRes.text();
             console.error('删除分支失败:', deleteRes.status, errorData);
@@ -813,18 +894,21 @@
           console.error('删除媒体分支失败:', error);
           // 不抛出错误，因为合并已经成功
         }
-        
+
         // 清空已上传但未提交的记录
         ImageUploadManager.uploadedButUncommitted.clear();
-      } else if(mergeRes.status === 409) {
+      } else if (mergeRes.status === 409) {
         // 合并冲突，可能需要手动处理
         console.warn('媒体分支与主分支存在冲突，无法自动合并');
+        showToast('⚠️ 媒体分支与主分支存在冲突，无法自动合并', 'warning', 5000);
       } else {
         const errorText = await mergeRes.text();
         console.error(`合并失败: ${mergeRes.status}`, errorText);
+        showToast(`❌ 合并失败: ${mergeRes.status}`, 'error', 5000);
       }
     } catch (error) {
       console.error('合并媒体分支时出错:', error);
+      showToast(`❌ 合并媒体分支时出错: ${error.message}`, 'error', 5000);
     }
   }
 
