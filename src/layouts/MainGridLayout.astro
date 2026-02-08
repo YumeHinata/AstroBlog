@@ -41,24 +41,6 @@ const hasBannerCredit =
 
 const hasBannerLink = !!siteConfig.banner.credit.url;
 
-const shouldShowComments =
-    showComments &&
-    (decodeURIComponent(Astro.url.pathname).startsWith("/posts/") ||
-        decodeURIComponent(Astro.url.pathname) === "/about");
-console.log("Debug info:");
-console.log("showComments:", showComments);
-console.log("Astro.url.pathname:", Astro.url.pathname);
-console.log("decoded pathname:", decodeURIComponent(Astro.url.pathname));
-console.log(
-    "starts with /posts/:",
-    decodeURIComponent(Astro.url.pathname).startsWith("/posts/"),
-);
-console.log(
-    "equals /about:",
-    decodeURIComponent(Astro.url.pathname) === "/about",
-);
-console.log("shouldShowComments:", shouldShowComments);
-
 const mainPanelTop = siteConfig.banner.enable
     ? `calc(${BANNER_HEIGHT}vh - ${MAIN_PANEL_OVERLAPS_BANNER_HEIGHT}rem)`
     : "5.5rem";
@@ -174,7 +156,7 @@ const mainPanelTop = siteConfig.banner.enable
                         <!-- make id different from windows.swup global property -->
                         <slot />
 
-                        {shouldShowComments && <Giscus />}
+                        {showComments && <Giscus />}
 
                         <div
                             class="footer col-span-2 onload-animation hidden lg:block"
