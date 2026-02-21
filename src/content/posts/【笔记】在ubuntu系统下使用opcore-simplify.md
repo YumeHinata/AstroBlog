@@ -126,4 +126,18 @@ EFI会被导出到`/tmp/`路径下，这个时候我们不要点任何按钮进�
 
 [https://github.com/USBToolBox/tool/tree/linux](https://github.com/USBToolBox/tool/tree/linux)
 
-直接选择Download Zip下载文件，上传到我们需要安装黑苹果的linux主机上。
+直接选择Download Zip下载文件，上传到我们需要安装黑苹果的linux主机上。或者
+
+```
+wget https://github.com/USBToolBox/tool/archive/refs/heads/linux.zip
+```
+
+解压后进入`/tool-linux/`运行`Linux.py`
+
+```
+# 安装依赖
+pip3 install -r requirements.txt
+
+# 运行脚本
+python3 Linux.py
+```
