@@ -50,4 +50,4 @@ git clone https://github.com/lzhoang2801/OpCore-Simplify.git
 python3 OpCore-Simplify.py
 ```
 
-选择1，输入`Report.json`的路径。
+选择1，输入`Report.json`的路径。如果
