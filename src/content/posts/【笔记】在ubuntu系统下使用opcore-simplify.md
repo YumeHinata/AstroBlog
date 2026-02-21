@@ -50,4 +50,64 @@ git clone https://github.com/lzhoang2801/OpCore-Simplify.git
 python3 OpCore-Simplify.py
 ```
 
-选择1，输入`Report.json`的路径。如果
+选择1，输入`Report.json`的路径。nuc5可能会出现以下报错
+
+### nuc5提取时遇到的问题及解决方法
+
+```
+Validation report for: /home/yume/opcore/OpCore-Simplify/Report.json
+
+Hardware report is not valid! Please check the errors and warnings below.
+
+Errors (7):
+    1. Root.Monitor.ICD2400.Connector Type: Value 'HDMI-A' does not match pattern '^(VGA|DVI|HDMI|LVDS|DP|eDP|Internal|Uninitialized)$'
+    2. Root.Monitor.ICD2400: Missing required key 'Connector Type'
+    3. Root.System Devices.PNP0C0B.ACPI Path: Value '\_TZ_.FAN3' does not match pattern '^[\\]?_SB(\.[A-Z0-9_]+)+$'
+    4. Root.System Devices.PNP0C0B_#1.ACPI Path: Value '\_TZ_.FAN1' does not match pattern '^[\\]?_SB(\.[A-Z0-9_]+)+$'
+    5. Root.System Devices.PNP0C0B_#2.ACPI Path: Value '\_TZ_.FAN4' does not match pattern '^[\\]?_SB(\.[A-Z0-9_]+)+$'
+    6. Root.System Devices.PNP0C0B_#3.ACPI Path: Value '\_TZ_.FAN2' does not match pattern '^[\\]?_SB(\.[A-Z0-9_]+)+$'
+    7. Root.System Devices.PNP0C0B_#4.ACPI Path: Value '\_TZ_.FAN0' does not match pattern '^[\\]?_SB(\.[A-Z0-9_]+)+$'
+
+Warnings (4):
+    1. Root.BIOS: Unknown key 'Above 4G Decoding'
+    2. Root.GPU.Intel Corporation HD Graphics 6000: Unknown key 'Bus Type'
+    3. Root.Sound.Realtek ALC283: Unknown key 'PCI Path'
+    4. Root.Sound.Realtek ALC283: Unknown key 'ACPI Path'
+```
+
+我们根据提示进行修改即可，唯一需要关注的点是风扇的ACPI 路径。
+
+```
+# 安装acpica-tool
+sudo apt install acpica-tools -y
+
+# 导出ACPI log
+sudo acpidump > acpi.log
+
+#提取dat
+acpixtract -a acpi.log
+
+# 反编译dsdt
+iasl -d dsdt.dat
+```
+
+我们打开`dsdt.dsl`文件，检索关键词`fan`。会发现以下内容
+
+```
+If ((Arg0 == 0x03))
+        {
+            If ((Zero == ACTT))
+            {
+                If ((ECON == One))
+                {
+                    \_SB.PCI0.LPCB.H_EC.ECWT (Zero, RefOf (\_SB.PCI0.LPCB.H_EC.CFAN))
+                }
+            }
+        }
+```
+
+`\\_SB.PCI0.LPCB.H_EC` 替换掉所有`\_TZ_.FAN`相关内容，保存。
+
+### 导入Report.json后
+
+接着根据提示我们导入ACPI文件，之前我们已经把ACPI文件夹复制到了OpCore-Simplify里，可以直接输入`ACPI`回车，下一步，如果没有导入的输入`ACPI`文件夹的绝对路径。
