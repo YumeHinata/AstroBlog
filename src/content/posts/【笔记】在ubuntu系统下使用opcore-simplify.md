@@ -117,3 +117,13 @@ If ((Arg0 == 0x03))
 前面根据自己需求选完选项后，会回到脚本主页（不清楚的选项就默认，MacOS的版本能最新就最新）。选择6导出EFI。
 
 EFI会被导出到`/tmp/`路径下，这个时候我们不要点任何按钮进行下一步，立刻通过其他工具将EFI复制到其他稳定的路径里。如果不小心点击了下一步，恭喜你重新导入Report.json把选项重新选一遍把，临时文件夹关闭后即刻删除。
+
+## 安装USBToolBox
+
+由于我们是linux系统，所以我们得选择linux分支的USBToolBox。
+
+::github{repo="USBToolBox/tool/tree/linux"}
+
+[https://github.com/USBToolBox/tool/tree/linux](https://github.com/USBToolBox/tool/tree/linux)
+
+直接选择Download Zip下载文件，上传到我们需要安装黑苹果的linux主机上。
