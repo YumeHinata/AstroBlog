@@ -26,5 +26,28 @@ draft: true
 通常Hardware-Sniffer是OpCore-Simplify自带的一个模块，但是由于我们是linux环境所以得特意安装一个linux支持的。
 
 ```
+# 新建一个目录然后克隆项目
 git clone https://github.com/lzhoang2801/Hardware-Sniffer.git
+
+# 进入目录运行HardwareSniffer.py
+python3 HardwareSniffer.py
 ```
+
+进入后，选H输出Report.json
+
+回车返回，选A输出ACPI
+
+现在`Hardware-Sniffer`文件夹下会有一个`SysReport`，`SysReport`下有一个`Report.json`和`ACPI`文件夹，把这两个复制到一回会克隆好的OpCore-Simplify文件夹里。
+
+## 安装OpCore-Simplify
+
+```
+# 新建一个目录然后克隆
+git clone https://github.com/lzhoang2801/OpCore-Simplify.git
+
+# 把刚刚复制的json和文件夹丢到项目里
+# 运行OpCore-Simplify.py
+python3 OpCore-Simplify.py
+```
+
+选择1，输入`Report.json`的路径。
