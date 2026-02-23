@@ -157,3 +157,23 @@ python3 macrecovery.py -b Mac-CFF7D910A743CAAF -m 00000000000000000 -os latest d
 ```
 
 把包含镜像的文件夹`com.apple.recovery.boot`、此前的EFI文件夹还有`usb_blueprint.json`保存到一台可以制作启动u盘的系统上，幻梦这边还是使用了Windows来完成这个工作。
+
+## 制作启动U盘
+
+下载一个Rufus来制作启动盘
+
+[https://github.com/pbatard/rufus/releases](https://github.com/pbatard/rufus/releases)
+
+![QQ20260223-183117.png](./images/_笔记_在ubuntu系统下使用opcore-simplify/QQ20260223-183117.png)
+
+**千万要注意**，此操作需要**格式化u盘**，请确保u盘里已经**做好备份**或内部无再需要的文件。
+
+初始化u盘后将`EFI`、`com.apple.recovery.boot`文件夹、`usb_blueprint.json`拖入盘内。
+
+启动U盘制作完成，安全弹出后插在准备安装U盘的主机上，进入bios选择u盘启动。
+
+## 进入启动盘
+
+有两种情况，第一种有一个recovery选项，那就选择recovery进入安装。
+
+第二种没有recovery的选项，可以按空格看一下是否有隐藏选项。如果没有，或者在按的过程中出现了黑屏，**不要**急着重启或做任何操作。等一段时间，正常情况下一段时间后你会看到出现了熟悉的跑码，我们也就顺利进入到recovery了。
