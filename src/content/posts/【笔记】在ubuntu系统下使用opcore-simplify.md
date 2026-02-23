@@ -1,5 +1,5 @@
 ---
-title: 【笔记】在Ubuntu系统下使用OpCore-Simplify做安装黑苹果的准备工作
+title: 【笔记】在Ubuntu系统下进行安装黑苹果的准备工作
 published: 2026-02-21
 description: 估计不会有几个人有这种需求的。哪有放着好好的linux不用，装黑苹果的。
 image: https://rdimg.yumehinata.com/random-wallpaper
@@ -19,7 +19,7 @@ draft: true
 
 ## 警告：
 
-这篇笔记里还存在一些未解决的问题，仅供参考。如果你在安装环节遇到一些问题，且项目的issues里没有提供解决方案的话，请善用Ai工具来完成检索和解答。此外目前由于5250u的核显为hd6000，因此Mac OS15应该是5250u最后支持的一个版本。
+只是部分一定要在被安装的主机上进行的工作会在ubuntu上完成，剩下非必要环节放在Windows上完成（例如：烧录到U盘）与MacOS完成（例如：usb映射），另外这篇笔记里还存在一些未解决的问题，仅供参考。如果你在安装环节遇到一些问题，且项目的issues里没有提供解决方案的话，请善用Ai工具来完成检索和解答。此外目前由于5250u的核显为hd6000，因此Mac OS15应该是5250u最后支持的一个版本。
 
 ## 安装Hardware-Sniffer
 
@@ -120,24 +120,40 @@ EFI会被导出到`/tmp/`路径下，这个时候我们不要点任何按钮进�
 
 ## 安装USBToolBox
 
-由于我们是linux系统，所以我们得选择linux分支的USBToolBox。
+由于我们是linux系统，所以我们得选择适合linux的分支。
 
-::github{repo="USBToolBox/tool/tree/linux"}
-
-[https://github.com/USBToolBox/tool/tree/linux](https://github.com/USBToolBox/tool/tree/linux)
-
-直接选择Download Zip下载文件，上传到我们需要安装黑苹果的linux主机上。或者
+::github{repo="Rakib7425/USBToolBoxTool"}
 
 ```
-wget https://github.com/USBToolBox/tool/archive/refs/heads/linux.zip
+git clone https://github.com/Rakib7425/USBToolBoxTool.git
 ```
 
-解压后进入`/tool-linux/`运行`Linux.py`
+解压后进入`./USBToolBoxTool/`运行`Linux.py`
 
 ```
-# 安装依赖
-pip3 install -r requirements.txt
-
 # 运行脚本
 python3 Linux.py
 ```
+
+选择D，然后选择B导出Json文件。和其他教程不同我们还需要之后再MacOS中通过Hackintool导入json完成工作。
+
+我们把生成好的`usb\_blueprint.json`进行单独保存
+
+## 下载MacOS15镜像
+
+先安装`acidanthera/OpenCorePkg`工具
+
+还是在一个合适的位置克隆项目
+
+```
+# 克隆项目
+git clone https://github.com/acidanthera/OpenCorePkg.git
+
+# 进入工具目录
+cd ./OpenCorePkg/Utilities/macrecovery
+
+# 拉取15版本镜像
+python3 macrecovery.py -b Mac-CFF7D910A743CAAF -m 00000000000000000 -os latest download
+```
+
+把包含镜像的文件夹和此前的EFI文件夹保存到一台可以制作启动u盘的系统上，幻梦这边还是使用了Windows来完成这个工作。
