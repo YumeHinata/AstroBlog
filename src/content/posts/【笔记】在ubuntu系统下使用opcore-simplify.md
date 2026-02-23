@@ -156,4 +156,4 @@ cd ./OpenCorePkg/Utilities/macrecovery
 python3 macrecovery.py -b Mac-CFF7D910A743CAAF -m 00000000000000000 -os latest download
 ```
 
-把包含镜像的文件夹和此前的EFI文件夹保存到一台可以制作启动u盘的系统上，幻梦这边还是使用了Windows来完成这个工作。
+把包含镜像的文件夹`com.apple.recovery.boot`、此前的EFI文件夹还有`usb_blueprint.json`保存到一台可以制作启动u盘的系统上，幻梦这边还是使用了Windows来完成这个工作。
