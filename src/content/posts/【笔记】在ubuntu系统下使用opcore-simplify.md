@@ -19,7 +19,7 @@ draft: true
 
 ## 警告：
 
-只是部分一定要在被安装的主机上进行的工作会在ubuntu上完成，剩下非必要环节放在Windows上完成（例如：烧录到U盘）与MacOS完成（例如：usb映射），另外这篇笔记里还存在一些未解决的问题，仅供参考。如果你在安装环节遇到一些问题，且项目的issues里没有提供解决方案的话，请善用Ai工具来完成检索和解答。此外目前由于5250u的核显为hd6000，因此Mac OS15应该是5250u最后支持的一个版本。
+只是部分一定要在被安装的主机上进行的工作会在ubuntu上完成，剩下非必要环节放在Windows上完成（例如：烧录到U盘）与MacOS完成（例如：usb映射），另外这篇笔记里还存在一些未解决的问题，仅供参考。如果你在安装环节遇到一些问题，且项目的issues里没有提供解决方案的话，请善用Ai工具来完成检索和解答。此外目前由于5250u的核显为hd6000，因此Mac OS15应该是5250u最后支持的一个版本，但是我们不选15而是选择12作为体验。
 
 ## 安装Hardware-Sniffer
 
@@ -139,7 +139,7 @@ python3 Linux.py
 
 我们把生成好的`usb\_blueprint.json`进行单独保存
 
-## 下载MacOS15镜像
+## 下载MacOS12镜像
 
 先安装`acidanthera/OpenCorePkg`工具
 
@@ -153,7 +153,7 @@ git clone https://github.com/acidanthera/OpenCorePkg.git
 cd ./OpenCorePkg/Utilities/macrecovery
 
 # 拉取15版本镜像
-python3 macrecovery.py -b Mac-CFF7D910A743CAAF -m 00000000000000000 -os latest download
+python3 macrecovery.py -b Mac-E43C1C25D4880AD6 -m 00000000000000000 download
 ```
 
 把包含镜像的文件夹`com.apple.recovery.boot`、此前的EFI文件夹还有`usb_blueprint.json`保存到一台可以制作启动u盘的系统上，幻梦这边还是使用了Windows来完成这个工作。
@@ -174,6 +174,4 @@ python3 macrecovery.py -b Mac-CFF7D910A743CAAF -m 00000000000000000 -os latest d
 
 ## 进入启动盘
 
-有两种情况，第一种有一个recovery选项，那就选择recovery进入安装。
-
-第二种没有recovery的选项，可以按空格看一下是否有隐藏选项。如果没有，或者在按的过程中出现了黑屏，**不要**急着重启或做任何操作。等一段时间，正常情况下一段时间后你会看到出现了熟悉的跑码，我们也就顺利进入到recovery了。
+进入引导后选择第一个运行。此时会出现黑屏，这是正常情况，等一段时间会出现跑码，此时说明成功进入安装环节。
