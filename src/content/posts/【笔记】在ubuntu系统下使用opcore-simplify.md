@@ -118,27 +118,6 @@ If ((Arg0 == 0x03))
 
 EFI会被导出到`/tmp/`路径下，这个时候我们不要点任何按钮进行下一步，立刻通过其他工具将EFI复制到其他稳定的路径里。如果不小心点击了下一步，恭喜你重新导入Report.json把选项重新选一遍把，临时文件夹关闭后即刻删除。
 
-## 安装USBToolBox
-
-由于我们是linux系统，所以我们得选择适合linux的分支。
-
-::github{repo="Rakib7425/USBToolBoxTool"}
-
-```
-git clone https://github.com/Rakib7425/USBToolBoxTool.git
-```
-
-解压后进入`./USBToolBoxTool/`运行`Linux.py`
-
-```
-# 运行脚本
-python3 Linux.py
-```
-
-选择D，然后选择B导出Json文件。和其他教程不同我们还需要之后再MacOS中通过Hackintool导入json完成工作。
-
-我们把生成好的`usb\_blueprint.json`进行单独保存
-
 ## 下载MacOS12镜像
 
 先安装`acidanthera/OpenCorePkg`工具
@@ -196,3 +175,25 @@ python3 macrecovery.py -b Mac-E43C1C25D4880AD6 -m 00000000000000000 download
 后面就等待进度条完成，过程中可能会反复重启几次。
 
 最后进入设置界面完成设置。
+
+## 生成UTBMap.kext文件
+
+现在我们应该顺利进入到MacOS系统了，可能还存在一些小问题或者卡顿的大问题，如果出现卡顿问题先跳转到下面疑难杂症里面尝试解决，为了保证阅读到流畅性还是先写如何导入。
+
+还是要拉取`USBToolBox/kext`工具
+
+```
+# 进入release页
+https://github.com/USBToolBox/kext/releases
+
+# 下载最新的release文件
+# 打开Downloads文件夹，双击下载的zip文件进行解压
+# 把usb_blueprint.json文件拷贝到刚刚解压好的文件夹里
+# 打开终端进入Downloads文件夹
+cd Downloads/[刚刚解压的文件夹名，不清楚的ls查看]
+
+# 运行以下指令
+/usr/libexec/PlistBuddy -c "Delete BuildinConfig" USBToolBox.kext/Contents/Info.plist
+/usr/libexec/PlistBuddy -c "Add BuildinConfig dict" USBToolBox.kext/Contents/Info.plist
+/usr/libexec/PlistBuddy -c "Merge usb_blueprint.json BuildinConfig" USBToolBox.kext/Contents/Info.plist
+```
