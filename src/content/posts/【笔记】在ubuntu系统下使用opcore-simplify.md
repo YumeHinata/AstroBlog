@@ -1,6 +1,6 @@
 ---
 title: 【笔记】在Ubuntu系统下进行安装黑苹果的准备工作，并安装黑苹果
-published: 2026-02-21
+published: 2026-03-01
 description: 估计不会有几个人有这种需求的。哪有放着好好的linux不用，装黑苹果的。
 image: https://rdimg.yumehinata.com/random-wallpaper
 tags:
