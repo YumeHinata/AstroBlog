@@ -11,7 +11,7 @@ tags:
   - NUC
   - NUC5i5RYK
 category: 笔记
-draft: true
+draft: false
 ---
 ## 题记：
 
@@ -180,15 +180,108 @@ python3 macrecovery.py -b Mac-E43C1C25D4880AD6 -m 00000000000000000 download
 
 现在我们应该顺利进入到MacOS系统了，可能还存在一些小问题或者卡顿的大问题，如果出现卡顿问题先跳转到下面疑难杂症里面尝试解决，为了保证阅读到流畅性还是先写如何导入。
 
-这一步再掏出一个u盘，随便挑一个windowsPE装好。同时带EFI文件的那个u盘也别把，把新的windowsPE盘插上，进winPE。
+这一步，取下刚刚带启动EFI的u盘，把u盘内的文件进行备份。备份完成后我们装一个Windows PE系统到U盘里，制作winPE是必须要做的，因为我们等会替换EFI还是要用winPE的。
 
-（这步主要是力求完美的操作，之前自动化生产的EFI通常已经能驱动usb设备了，真不想做可以不做这一步）
+（这步生成USB Map主要是力求完美的操作，之前自动化生产的EFI通常已经能驱动usb设备了，真不想做可以不做这一步）
+
+制作PE盘，我们挑一个USB3.0的U盘。这个很重要，一定要是USB3.0的，不然之后这个USB端口在Mac下就只有2.0的速度了。
+
+PE系统很多，请自行选择。幻梦选了老牌的[微PE](https://www.wepe.com.cn/download.html)
+
+做好PE后下载[https://github.com/USBToolBox/tool/releases](https://github.com/USBToolBox/tool/releases)，下载windows.zip文件复制到PE里等会要用到。
+
+刚刚备份的，尤其是EFI也复制进去。
+
+然后，在准备一个USB3.0的设备，推荐是U盘，之后识别端口需要用到，u盘还能方便我们制作新的config.plist。
+
+进入pe后解压zip并进入文件夹，双击Windows.exe启动工具，启动不了的可以试试在文件夹位置打开cmd然后`./Windows.exe`尝试打开
+
+选择D.  Discover Ports
+
+![QQ20260228-230823.png](./images/_笔记_在ubuntu系统下使用opcore-simplify/QQ20260228-230823.png)
+
+掏出我们刚刚另外准备好的usb3.0设备，依次测试每个usb接口。**注意：工具5秒进行一次识别，确认工具刷新，识别成功后，再试下一个**
+
+全部完成后，B退出。到第一页后选择S.  Select Ports and Build Kext
+
+确认识别到的USB口数量正确，选择K，进行生成。
+
+生成完成在这个工具的目录下会多一个`UTBMap.kext`我们把这个复制到`/EFI/OC/Kexts`下，我们现在要想办法更新`config.plist`。第一种办法，把整个EFI文件夹复制到一个新的U盘里备用；第二种方法，关机拔出U盘进行下一步
+
+把U盘插到一个Windows系统的主机上，我们需要使用到一个工具[https://github.com/corpnewt/ProperTree](https://github.com/corpnewt/ProperTree)
+
+拉取以后运行`ProperTree.bat`
+
+![屏幕截图 2026-02-28 232337.png](./images/_笔记_在ubuntu系统下使用opcore-simplify/屏幕截图_2026-02-28_232337.png)
+
+我们导入刚刚`/EFI/OC`下的`config.plist`
+
+然后我们再选择OC snapshot
+
+![屏幕截图 2026-02-28 232454.png](./images/_笔记_在ubuntu系统下使用opcore-simplify/屏幕截图_2026-02-28_232454.png)
+
+ctrl+s保存，保存完后退出取下U盘，我们在来到winPE完成后续操作。
+
+## 导入EFI
+
+进入PE后我们使用自带的磁盘精灵工具，左侧找到一个名为ESP的卷，卷标为EFI，通常情况下这个卷里是空的我们选到文件预览，直接把我们刚刚完成修改后的整个EFI文件夹丢到里面。
+
+由于我们是单系统，直接重新启动在bios中将硬盘设置为第一启动项完成我们的所有工作。
+
+## 疑难杂症
+
+幻梦目前遇到的最严重的问题是与核显输出相关，暂时也无法完全解决。
+
+### 系统很卡
+
+MacOS12对于5250u和他的hd6000来说有压力，但是绝对不会出现画面撕裂、锯齿边，动画掉的只有1帧的问题的。出现这种问题一般就是显存分配的问题了。
+
+我们点击左上角的`苹果图标-关于本机-系统报告`左侧`硬件-图形卡/显示器-VRAM`出现这种情况时显存分配可能只有14M，5250U的HD6000核显正常有1536MB的显存，如果过少就说明出现了问题。
+
+我们打开`config.plist`检查`Nvram`项
+
+![QQ20260228-234649.png](./images/_笔记_在ubuntu系统下使用opcore-simplify/QQ20260228-234649.png)
+
+注意看这个`-igfxvesa`如果你有这个问题，那么他就是罪魁祸首，直接删掉即可。但是删掉会带来下一个问题，hdmi接口无法输出1080p60hz的视频信号。但是我们至少先要系统能正常用再最求画面。
+
+### 显示器分辨率低
+
+幻梦使用的是一个2k分辨率的显示器，2560*1440分辨率。我们去掉上面的参数以后，hdmi接口输出的时钟频率被限制，导致信号出现问题。幻梦暂时没有找到完美解决方案，但是我们可以缓解一下。
+
+[https://github.com/xzhih/one-key-hidpi](https://github.com/xzhih/one-key-hidpi)，这个工具可以帮我们解锁hidpi功能。
+
+要用这个工具我们要先关闭`SIP`。
+
+重启进入引导，这里我们选择`Recovery`，选择语言，顶部导航栏选择`实用工具-终端`输入以下指令
 
 ```
-# 进入pe后前往release页
-https://github.com/USBToolBox/tool/releases
+csrutil disable
+```
 
-# 下载最新的release文件，并解压
-# 文件夹内 shift+鼠标右键，打开cmd或powershell
+关闭SIP，关闭后重启进入系统拉取工具。
 
 ```
+git clone https://github.com/xzhih/one-key-hidpi.git
+```
+
+运行`hidpi.command`
+
+根据你的需求进行选择，作为nuc通常我们选择imac+自己显示器的分辨率，**笔记本用户装黑苹果的别照抄**
+
+完成设置后重启
+
+重启后进入系统，默认就是你选择的显示器分辨率，但是实际上输出的依旧是1080p不过不再是50hz而是正常的60hz了。但是你应该会感觉还是有点糊，我们进入系统选择`系统偏好设置-显示器-缩放-显示所有分辨率`选择带**HiDPI**的一个分辨率。不过这只能改善一点你的使用体验，并没有真的解决掉时钟频率受限的核心问题。如果你有好的办法，能发到评论区吗，拜托了。
+
+对了，不要忘记重新开启`SIP`
+
+老位置输入
+
+```
+csrutil enable
+```
+
+SIP还是能够增加一点点安全性的，虽然是黑果。
+
+## 最后
+
+享受你的黑苹果吧，目前这个还不是完美黑苹果系统，不过至少能够正常使用了，这个笔记到这里也就结束啦。
