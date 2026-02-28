@@ -2,7 +2,7 @@
 title: 【笔记】在Ubuntu系统下进行安装黑苹果的准备工作，并安装黑苹果
 published: 2026-03-01
 description: 估计不会有几个人有这种需求的。哪有放着好好的linux不用，装黑苹果的。
-image: https://rdimg.yumehinata.com/random-wallpaper
+image: https:/pximg.yumehinata.com/img-master/img/2026/02/02/22/01/21/140682798_p0_master1200.jpg
 tags:
   - 黑苹果
   - Ubuntu
@@ -135,7 +135,7 @@ cd ./OpenCorePkg/Utilities/macrecovery
 python3 macrecovery.py -b Mac-E43C1C25D4880AD6 -m 00000000000000000 download
 ```
 
-把包含镜像的文件夹`com.apple.recovery.boot`、此前的EFI文件夹还有`usb_blueprint.json`保存到一台可以制作启动u盘的系统上，幻梦这边还是使用了Windows来完成这个工作。
+把包含镜像的文件夹`com.apple.recovery.boot`、此前的**EFI文件夹**，保存到一台可以制作启动u盘的系统上。幻梦这边还是使用了另一台Windows来完成这两步的工作。
 
 ## 制作启动U盘
 
