@@ -180,20 +180,15 @@ python3 macrecovery.py -b Mac-E43C1C25D4880AD6 -m 00000000000000000 download
 
 现在我们应该顺利进入到MacOS系统了，可能还存在一些小问题或者卡顿的大问题，如果出现卡顿问题先跳转到下面疑难杂症里面尝试解决，为了保证阅读到流畅性还是先写如何导入。
 
-还是要拉取`USBToolBox/kext`工具
+这一步再掏出一个u盘，随便挑一个windowsPE装好。同时带EFI文件的那个u盘也别把，把新的windowsPE盘插上，进winPE。
+
+（这步主要是力求完美的操作，之前自动化生产的EFI通常已经能驱动usb设备了，真不想做可以不做这一步）
 
 ```
-# 进入release页
-https://github.com/USBToolBox/kext/releases
+# 进入pe后前往release页
+https://github.com/USBToolBox/tool/releases
 
-# 下载最新的release文件
-# 打开Downloads文件夹，双击下载的zip文件进行解压
-# 把usb_blueprint.json文件拷贝到刚刚解压好的文件夹里
-# 打开终端进入Downloads文件夹
-cd Downloads/[刚刚解压的文件夹名，不清楚的ls查看]
+# 下载最新的release文件，并解压
+# 文件夹内 shift+鼠标右键，打开cmd或powershell
 
-# 运行以下指令
-/usr/libexec/PlistBuddy -c "Delete BuildinConfig" USBToolBox.kext/Contents/Info.plist
-/usr/libexec/PlistBuddy -c "Add BuildinConfig dict" USBToolBox.kext/Contents/Info.plist
-/usr/libexec/PlistBuddy -c "Merge usb_blueprint.json BuildinConfig" USBToolBox.kext/Contents/Info.plist
 ```
