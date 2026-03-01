@@ -147,7 +147,7 @@ python3 macrecovery.py -b Mac-E43C1C25D4880AD6 -m 00000000000000000 download
 
 **千万要注意**，此操作需要**格式化u盘**，请确保u盘里已经**做好备份**或内部无再需要的文件。
 
-初始化u盘后将`EFI`、`com.apple.recovery.boot`文件夹、`usb_blueprint.json`拖入盘内。
+初始化u盘后将`EFI`、`com.apple.recovery.boot`文件夹拖入盘内。
 
 启动U盘制作完成，安全弹出后插在准备安装U盘的主机上，进入bios选择u盘启动。
 
