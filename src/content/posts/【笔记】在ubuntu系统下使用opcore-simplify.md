@@ -206,7 +206,7 @@ PE系统很多，请自行选择。幻梦选了老牌的[微PE](https://www.wepe
 
 确认识别到的USB口数量正确，选择K，进行生成。
 
-生成完成在这个工具的目录下会多一个`UTBMap.kext`我们把这个复制到`/EFI/OC/Kexts`下，我们现在要想办法更新`config.plist`。第一种办法，把整个EFI文件夹复制到一个新的U盘里备用；第二种方法，关机拔出U盘进行下一步
+生成完成在这个工具的目录下会多一个`UTBMap.kext`我们把这个复制到`/EFI/OC/Kexts`下,并且**删掉**原有的`UTBdefault.kext`，我们现在要想办法更新`config.plist`。第一种办法，把整个EFI文件夹复制到一个新的U盘里备用；第二种方法，关机拔出U盘进行下一步
 
 把U盘插到一个Windows系统的主机上，我们需要使用到一个工具[https://github.com/corpnewt/ProperTree](https://github.com/corpnewt/ProperTree)
 
@@ -242,7 +242,7 @@ MacOS12对于5250u和他的hd6000来说有压力，但是绝对不会出现画�
 
 ![QQ20260228-234649.png](./images/_笔记_在ubuntu系统下使用opcore-simplify/QQ20260228-234649.png)
 
-注意看这个`-igfxvesa`如果你有这个问题，那么他就是罪魁祸首，直接删掉即可。但是删掉会带来下一个问题，hdmi接口无法输出1080p60hz的视频信号。但是我们至少先要系统能正常用再最求画面。
+注意看这个`-igfxvesa`如果你有这个问题，那么他就是罪魁祸首，直接删掉即可。但是删掉会带来下一个问题，hdmi接口无法输出1080p60hz的视频信号。但是我们至少先要系统能正常用再追求画面。
 
 ### 显示器分辨率低
 
