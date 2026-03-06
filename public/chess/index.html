@@ -1,0 +1,164 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<!-- saved from url=(0041)http://www.girls-frontline.com/chess.html -->
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+	<title>少女前线-战术棋v0.1.2 beta</title>
+	<script type="text/javascript" async="" src="./少女前线-战术棋v0.1.2 beta_files/ga.js"></script>
+	<script type="text/javascript" src="./少女前线-战术棋v0.1.2 beta_files/jquery.min.js"></script>
+	<script type="text/javascript"
+		src="https://webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject2.js"></script>
+	<!-- <script type="text/javascript">
+		var unityObjectUrl = "https://webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject2.js";
+		// if (document.location.protocol == 'https:')
+		// 	unityObjectUrl = unityObjectUrl.replace("http://", "https://ssl-");
+		// document.write('<script type="text\/javascript" src="' + unityObjectUrl + '"><\/script>');
+	</script> -->
+	<script type="text/javascript" src="./少女前线-战术棋v0.1.2 beta_files/UnityObject2.js"></script>
+	<script type="text/javascript">
+		var config = {
+			width: 1024,
+			height: 576,
+			params: { enableDebugging: "0" }
+
+		};
+		var u = new UnityObject2(config);
+
+		jQuery(function () {
+
+			var $missingScreen = jQuery("#unityPlayer").find(".missing");
+			var $brokenScreen = jQuery("#unityPlayer").find(".broken");
+			$missingScreen.hide();
+			$brokenScreen.hide();
+
+			u.observeProgress(function (progress) {
+				switch (progress.pluginStatus) {
+					case "broken":
+						$brokenScreen.find("a").click(function (e) {
+							e.stopPropagation();
+							e.preventDefault();
+							u.installPlugin();
+							return false;
+						});
+						$brokenScreen.show();
+						break;
+					case "missing":
+						$missingScreen.find("a").click(function (e) {
+							e.stopPropagation();
+							e.preventDefault();
+							u.installPlugin();
+							return false;
+						});
+						$missingScreen.show();
+						break;
+					case "installed":
+						$missingScreen.remove();
+						break;
+					case "first":
+						break;
+				}
+			});
+			u.initPlugin(jQuery("#unityPlayer")[0], "https://www.yumehinata.com/chess/chess-v0.1.2.unity3d");
+		});
+	</script>
+	<style type="text/css">
+		<!--
+		body {
+			font-family: Helvetica, Verdana, Arial, sans-serif;
+			background-color: white;
+			color: black;
+			text-align: center;
+		}
+
+		a:link,
+		a:visited {
+			color: #000;
+		}
+
+		a:active,
+		a:hover {
+			color: #666;
+		}
+
+		p.header {
+			font-size: small;
+		}
+
+		p.header span {
+			font-weight: bold;
+		}
+
+		p.footer {
+			font-size: x-small;
+		}
+
+		div.content {
+			margin: auto;
+			width: 1024px;
+		}
+
+		div.broken,
+		div.missing {
+			margin: auto;
+			position: relative;
+			top: 50%;
+			width: 193px;
+		}
+
+		div.broken a,
+		div.missing a {
+			height: 63px;
+			position: relative;
+			top: -31px;
+		}
+
+		div.broken img,
+		div.missing img {
+			border-width: 0px;
+		}
+
+		div.broken {
+			display: none;
+		}
+
+		div#unityPlayer {
+			cursor: default;
+			height: 576px;
+			width: 1024px;
+		}
+
+		div.developerInfo {
+			font-size: small;
+		}
+
+		div.developerInfo a {
+			color: red;
+		}
+		-->
+	</style>
+</head>
+
+<body>
+	<p class="header"><span>战术棋v0.1.2 beta</span></p>
+	<div class="content">
+		<div id="unityPlayer"><embed src="https://www.yumehinata.com/chess/chess-v0.1.2.unity3d"
+				type="application/vnd.unity" width="1024" height="576"
+				firstframecallback="UnityObject2.instances[0].firstFrameCallback();" enabledebugging="0"
+				style="display: block; width: 1024px; height: 576px;"></div>
+	</div>
+	<p class="footer">« created with <a href="http://unity3d.com/unity/" title="Go to unity3d.com">Unity</a> »</p>
+	<div class="developerInfo">
+		<p>《少女前线-战术棋》还处于测试当中，可能存在着预料不到的问题，制作组会尽快修复(ง •̀_•́)ง</p>
+		<p>战术棋讨论群484251181，如果遇到BUG或者有意见建议请发送邮件至
+			<a href="mailto:cs@wave-game.com">cs@wave-game.com</a>
+		</p>
+		<p>最后祝各位游戏愉快o(*≧▽≦)ツ</p>
+		<p>返回<a href="http://www.girls-frontline.com/">《少女前线》官网</a></p>
+	</div>
+
+
+</body>
+
+</html>
