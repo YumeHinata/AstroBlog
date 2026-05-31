@@ -162,8 +162,8 @@ const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url; // �
         try {
             // 只请求 1 次原始简洁的 json 字典
             const res = await fetch(
-                "https://fastly.jsdelivr.net/gh/YumeHinata/GA4-Click-Statistics@main/data/views.json",
-            );
+                "https://fastly.jsdelivr.net/gh/你的github账号/你刚刚建立的仓库@main/data/views.json",
+            );//这里要改成你仓库的地址
             if (!res.ok) return;
             const viewsMap = await res.json();
 
