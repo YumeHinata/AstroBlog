@@ -134,7 +134,6 @@ const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url; // �
                 data-path={cleanUrl}
                 style="--coverWidth: 28%;"
             >
-                次阅读
             </div>
         </div>
     </div>
@@ -207,9 +206,9 @@ const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url; // �
             targets.forEach((el) => {
                 const path = el.getAttribute("data-path");
                 if (path && viewsMap[path] !== undefined) {
-                    el.textContent = viewsMap[path];
+                    el.textContent = viewsMap[path] + " 次阅读";
                 } else {
-                    el.textContent = "0";
+                    el.textContent = "0 次阅读";
                 }
             });
         } catch (e) {
