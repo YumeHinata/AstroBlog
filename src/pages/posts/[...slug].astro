@@ -108,6 +108,16 @@ const jsonLd = {
                         }
                     </div>
                 </div>
+                <div class="flex flex-row items-center">
+                    <div
+                        class="transition h-6 w-6 rounded-md bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50 flex items-center justify-center mr-2"
+                    >
+                        <Icon
+                            name="material-symbols:visibility-outline-rounded"
+                        />
+                    </div>
+                    <div class="text-sm" id="page-view-count"></div>
+                </div>
             </div>
 
             <!-- title -->
@@ -224,3 +234,44 @@ const jsonLd = {
         </a>
     </div>
 </MainGridLayout>
+<script>
+    async function loadSinglePageView() {
+        const counterEl = document.getElementById("page-view-count");
+        if (!counterEl) return;
+
+        try {
+            // 1. 获取当前浏览器的真实路径 (例如: "/posts/%E7%AC%94%E8%AE%B0/")
+            let currentPath = window.location.pathname;
+
+            // 2. 解码 URL，将密文还原成干净的中文 (例如: "/posts/笔记/")
+            currentPath = decodeURIComponent(currentPath);
+
+            // 3. 【精准去斜杠】如果末尾带了斜杠（且不是根路径），利落地把它切掉
+            if (currentPath.endsWith("/") && currentPath !== "/") {
+                currentPath = currentPath.slice(0, -1);
+            }
+
+            // 4. 动态抓取全局 JSON 字典
+            const res = await fetch("/data/views.json");
+            if (!res.ok) return;
+            const viewsMap = await res.json();
+
+            // 5. 双重保险匹配（支持明文中文 Key 或 编码后的 Key）
+            const encodedPath = encodeURI(currentPath);
+            const count = viewsMap[currentPath] ?? viewsMap[encodedPath];
+
+            // 6. 成功上岸，打完收工
+            if (count !== undefined) {
+                counterEl.textContent = count;
+            } else {
+                counterEl.textContent = "0" + "  次阅读";
+            }
+        } catch (e) {
+            console.error("[GA4 Views] 阅读页获取阅读量失败:", e);
+        }
+    }
+
+    // 初始化并兼容 Fuwari 的 View Transitions 路由切换动画
+    loadSinglePageView();
+    document.addEventListener("astro:after-swap", loadSinglePageView);
+</script>
