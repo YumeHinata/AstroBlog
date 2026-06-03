@@ -264,9 +264,9 @@ const jsonLd = {
 
             // 6. 成功上岸，打完收工
             if (count !== undefined) {
-                counterEl.textContent = count;
+                counterEl.textContent = count + "  次阅读";
             } else {
-                counterEl.textContent = "0" + "  次阅读";
+                counterEl.textContent = "0  次阅读";
             }
         } catch (e) {
             console.error("[GA4 Views] 阅读页获取阅读量失败:", e);
