@@ -34,7 +34,16 @@ const maxLevel = siteConfig.toc.depth;
 
 {
     isPostsRoute && (
-        <table-of-contents class:list={[className, "group card-base"]}>
+        <div
+                id="active-indicator"
+                style="opacity: 0"
+                class:list={[
+                    { hidden: headings.length == 0 },
+                    "-z-10 absolute bg-[var(--toc-btn-hover)] left-0 right-0 rounded-xl transition-all " +
+                        "group-hover:bg-transparent border-2 border-[var(--toc-btn-hover)] group-hover:border-[var(--toc-btn-active)] border-dashed",
+                ]}
+            />
+        <table-of-contents class:list={[className, "group card-table"]}>
             {headings
                 .filter((heading) => heading.depth < minDepth + maxLevel)
                 .map((heading) => (
@@ -78,15 +87,7 @@ const maxLevel = siteConfig.toc.depth;
                         </div>
                     </a>
                 ))}
-            <div
-                id="active-indicator"
-                style="opacity: 0"
-                class:list={[
-                    { hidden: headings.length == 0 },
-                    "-z-10 absolute bg-[var(--toc-btn-hover)] left-0 right-0 rounded-xl transition-all " +
-                        "group-hover:bg-transparent border-2 border-[var(--toc-btn-hover)] group-hover:border-[var(--toc-btn-active)] border-dashed",
-                ]}
-            />
+            
         </table-of-contents>
     )
 }
