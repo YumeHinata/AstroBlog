@@ -90,6 +90,9 @@
     .text-50 {
         @apply text-black/50 dark:text-white/50
     }
+    .text-c9 {
+        @apply text-[#737373] dark:text-[#c9c9c9]
+    }
     .text-30 {
         @apply text-black/30 dark:text-white/30
     }
