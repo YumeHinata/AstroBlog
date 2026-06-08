@@ -252,7 +252,7 @@ const jsonLd = {
 
                 // 4. 动态抓取全局 JSON 字典
                 const res = await fetch(
-                    "https://fastly.jsdelivr.net/gh/YumeHinata/GA4-Click-Statistics@main/data/views.json",
+                    "https://ghr.yumehinata.com/YumeHinata/GA4-Click-Statistics/refs/heads/main/data/views.json",
                 );
                 if (!res.ok) return;
                 const viewsMap = await res.json();
