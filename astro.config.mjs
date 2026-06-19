@@ -35,7 +35,7 @@ export default defineConfig({
 	integrations: [
 		indexnow({
 			key: process.env.INDEXNOW_KEY,
-			cacheDir: "./public/.astro-indexnow-cache.json",
+			cacheDir: "./public/",
 		}),
 		tailwind({
 			nesting: true,
