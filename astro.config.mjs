@@ -34,7 +34,7 @@ export default defineConfig({
 	trailingSlash: "always",
 	integrations: [
 		indexnow({
-			key: process.env.INDEXNOW_KEY,
+			key: "3c4b70d98d884e15be6c0d43517e1c06",
 			cacheDir: "./public/",
 		}),
 		tailwind({
