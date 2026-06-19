@@ -6,7 +6,7 @@
     "dev": "astro dev",
     "start": "astro dev",
     "check": "astro check",
-    "build": "(curl -fs https://www.yumehinata.com/.astro-indexnow-cache.json -o ./public/.astro-indexnow-cache.json || echo '{}' > ./public/.astro-indexnow-cache.json) && astro build && cp ./public/.astro-indexnow-cache.json .edgeone/assets/ && cp ./public/.astro-indexnow-cache.json dist/client/ && pagefind --site dist",
+    "build": "(curl -fs https://www.yumehinata.com1/.astro-indexnow-cache.json -o ./public/.astro-indexnow-cache.json || echo '{}' > ./public/.astro-indexnow-cache.json) && astro build && cp ./public/.astro-indexnow-cache.json .edgeone/assets/ && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
     "type-check": "tsc --noEmit --isolatedDeclarations",
