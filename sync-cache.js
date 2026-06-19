@@ -1,44 +1,43 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-console.log('🔍 [Cache Sync] 开始全盘检索 IndexNow 缓存文件...');
+// 1. 确定插件生成的最新、最正确的源文件
+const sourcePath = './public/.astro-indexnow-cache.json';
 
-let foundPath = null;
+if (!fs.existsSync(sourcePath)) {
+    console.error(`❌ [Cache Sync] 错误：找不到源缓存文件 ${sourcePath}`);
+    process.exit(0);
+}
 
-// 1. 自动全盘扫描，外加排除无关干扰目录
-function findCache(dir) {
+const sourceSize = fs.statSync(sourcePath).size;
+console.log(`📦 [Cache Sync] 探测到源文件大小为: ${sourceSize} 字节。开始全盘地毯式强推覆盖...`);
+
+// 2. 递归扫描全盘（包含隐藏目录如 .edgeone），见一个杀一个，全部替换
+function syncEverywhere(dir) {
     if (!fs.existsSync(dir)) return;
     const files = fs.readdirSync(dir);
+
     for (const file of files) {
         const fullPath = path.join(dir, file);
+
+        // 跳过 node_modules 和 .git 提高扫描速度
+        if (file === 'node_modules' || file === '.git') continue;
+
         if (fs.statSync(fullPath).isDirectory()) {
-            if (!['node_modules', '.git', 'dist', '.edgeone'].includes(file)) {
-                findCache(fullPath);
-            }
+            syncEverywhere(fullPath);
         } else if (file === '.astro-indexnow-cache.json') {
-            foundPath = fullPath;
-            break;
+            // 排除掉源文件自身，防止套娃
+            if (path.normalize(fullPath) !== path.normalize(sourcePath)) {
+                try {
+                    fs.copyFileSync(sourcePath, fullPath);
+                    console.log(`🚀 [Cache Sync] 强行覆盖成功 -> ${fullPath} (现已同步为 ${fs.statSync(fullPath).size} 字节)`);
+                } catch (err) {
+                    console.error(`❌ [Cache Sync] 覆盖失败 -> ${fullPath}:`, err.message);
+                }
+            }
         }
     }
 }
 
-findCache('.');
-
-// 2. 找到后强行同步到 EdgeOne 所有的潜在静态发布目录
-if (foundPath) {
-    const size = fs.statSync(foundPath).size;
-    console.log(`✨ [Cache Sync] 抓到你了！位于: ${foundPath}，文件大小: ${size} 字节`);
-
-    const targets = [
-        './dist/.astro-indexnow-cache.json',
-        './dist/client/.astro-indexnow-cache.json'
-    ];
-
-    targets.forEach(target => {
-        fs.mkdirSync(path.dirname(target), { recursive: true });
-        fs.copyFileSync(foundPath, target);
-        console.log(`🚀 [Cache Sync] 已成功强制覆盖到: ${target}`);
-    });
-} else {
-    console.log('❌ [Cache Sync] 警告：在当前工作区未找到任何 .astro-indexnow-cache.json 文件！');
-}
+syncEverywhere('.');
+console.log('✨ [Cache Sync] 全盘盲区同步彻底完成！');
