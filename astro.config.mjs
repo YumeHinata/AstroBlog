@@ -36,7 +36,7 @@ export default defineConfig({
 		indexnow({
 			key: "fd7fab2aa5f94d25937177607574bbf4",
 			cacheDir: "./public/",
-			enabled: false,
+			enabled: true,
 		}),
 		tailwind({
 			nesting: true,
