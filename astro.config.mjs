@@ -34,8 +34,9 @@ export default defineConfig({
 	trailingSlash: "always",
 	integrations: [
 		indexnow({
-			key: "3c4b70d98d884e15be6c0d43517e1c06",
+			key: "fd7fab2aa5f94d25937177607574bbf4",
 			cacheDir: "./public/",
+			enabled: false,
 		}),
 		tailwind({
 			nesting: true,
