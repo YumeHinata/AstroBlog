@@ -43,6 +43,8 @@ const coverWidth = "28%";
 const { remarkPluginFrontmatter } = await entry.render();
 
 const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url; // 用于匹配 views.json 中的路径，确保末尾没有斜杠（除非是根路径）
+
+const imageUrl = `${image}?title=${title}`;
 ---
 
 <div
@@ -157,7 +159,7 @@ const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url; // �
                     />
                 </div>
                 <ImageWrapper
-                    src={image}
+                    src={imageUrl}
                     basePath={path.join("content/posts/", getDir(entry.id))}
                     alt="Cover Image of the Post"
                     class="w-full h-full"
