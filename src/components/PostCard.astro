@@ -44,7 +44,10 @@ const { remarkPluginFrontmatter } = await entry.render();
 
 const cleanUrl = url.endsWith("/") && url !== "/" ? url.slice(0, -1) : url; // 用于匹配 views.json 中的路径，确保末尾没有斜杠（除非是根路径）
 
-const imageUrl = `${image}?title=${title}`;
+const imageUrl =
+    typeof image === "string" && image.startsWith("http")
+        ? `${image}?title=${title}`
+        : image;
 ---
 
 <div
