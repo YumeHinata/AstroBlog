@@ -4,7 +4,10 @@ published: 2026-07-10
 description: 如果幻梦没有见过SveltiaCMS，那么大概能忍受DecapCMS。但是现在幻梦看见了，就再也忍受不了。
 image: https://pximg.yumehinata.com/img-master/img/2023/10/31/14/14/51/113004958_p0_master1200.jpg
 tags:
-  - Sveltia;Decap;Fuwari;Astro
+  - Sveltia
+  - Decap
+  - Fuwari
+  - Astro
 category: 笔记
 draft: false
 ---
@@ -48,19 +51,19 @@ logo_url: Sveltia的logo位置
 media_folder: "/src/content/posts/images" # 文件将被存储在仓库中的位置
 
 collections:
-  - name: "terminal" # 用于路由，例如，/admin/collections/blog
+    - name: "terminal" # 用于路由，例如，/admin/collections/blog
     label: "paper" # 在 UI 中使用
     folder: "src/content/posts" # 存储文档的文件夹路径
     create: true # 允许用户在此集合中创建新文档
     fields: # 每个文档的字段，通常在 front matter 中
-      - { label: "标题", name: "title", widget: "string" }
-      - { label: "发布日期", name: "published", widget: "datetime", type: "date" }
-      - { label: "描述", name: "description", widget: "text", required: false }
-      - { label: "封面图片", name: "image", widget: "image", default: "https://rdimg.yumehinata.com/random-wallpaper"}
-      - { label: "标签", name: "tags", widget: "list", required: false }
-      - { label: "分类", name: "category", widget: "string", required: false }
-      - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
-      - { label: "正文", name: "body", widget: "richtext" }
+            - { label: "标题", name: "title", widget: "string" }
+            - { label: "发布日期", name: "published", widget: "datetime", type: "date" }
+            - { label: "描述", name: "description", widget: "text", required: false }
+            - { label: "封面图片", name: "image", widget: "image", default: "https://rdimg.yumehinata.com/random-wallpaper"}
+            - { label: "标签", name: "tags", widget: "list", required: false }
+            - { label: "分类", name: "category", widget: "string", required: false }
+            - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
+            - { label: "正文", name: "body", widget: "richtext" }
     media_folder: "/src/content/posts/images"
     public_folder: "./images" # 上传媒体文件的 src 属性
 
