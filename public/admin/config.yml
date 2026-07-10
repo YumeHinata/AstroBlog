@@ -5,7 +5,7 @@ collections:
     create: true # 允许用户在此集合中创建新文档
     fields: # 每个文档的字段，通常在 front matter 中
       - { label: "标题", name: "title", widget: "string" }
-      - { label: "发布日期", name: "date", widget: "datetime", type: "date" }
+      - { label: "发布日期", name: "published", widget: "datetime", type: "date" }
       - { label: "描述", name: "description", widget: "text", required: false }
       - { label: "封面图片", name: "image", widget: "image", default: "https://rdimg.yumehinata.com/random-wallpaper"}
       - { label: "标签", name: "tags", widget: "list", required: false }
@@ -18,8 +18,8 @@ media_folder: "/src/content/posts/images" # 文件将被存储在仓库中的位
 # publish_mode: editorial_workflow
 i18n:
   structure: multiple_folders
-  locales: ["zh-cn", "en"]
-  default_locale: "zh-cn"
+  locales: ["ja", "en"]
+  default_locale: "ja"
 backend:
   name: github
   repo: "YumeHinata/AstroBlog"
