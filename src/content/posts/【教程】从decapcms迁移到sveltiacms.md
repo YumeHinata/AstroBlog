@@ -45,7 +45,7 @@ draft: false
 
 Sveltia的config.yml配置文件如下
 
-```plain
+```yaml
 logo_url: Sveltia的logo位置
 
 media_folder: "/src/content/posts/images" # 文件将被存储在仓库中的位置
@@ -64,8 +64,8 @@ collections:
             - { label: "分类", name: "category", widget: "string", required: false }
             - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
             - { label: "正文", name: "body", widget: "richtext" }
-    media_folder: "/src/content/posts/images"
-    public_folder: "./images" # 上传媒体文件的 src 属性
+    media_folder: "/src/content/posts/images/{{slug}}"
+    public_folder: "./images/{{slug}}" # 上传媒体文件的 src 属性
 
 i18n:
   structure: multiple_folders
@@ -104,5 +104,7 @@ backend:
 ![媒体文件页](./images/QQ20260710-210757.png)
 
 ![黑夜模式与小语种支持，但是目前只支持英语与日语](./images/QQ20260710-210933.png)
+
+![快捷键](./images/%E3%80%90%E6%95%99%E7%A8%8B%E3%80%91%E4%BB%8Edecapcms%E8%BF%81%E7%A7%BB%E5%88%B0sveltiacms/QQ20260710-220151.png)
 
 比Decap美观太多了
