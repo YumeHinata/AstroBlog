@@ -14,7 +14,7 @@ collections:
       - { label: "正文", name: "body", widget: "richtext" }
       # - { label: "正文", name: "body", widget: "vditor-markdown" }
 media_folder: "{{dirname}}/images" # 文件将被存储在仓库中的位置
-public_folder: "{{media_dir}}" # 上传媒体文件的 src 属性
+public_folder: "images" # 上传媒体文件的 src 属性
 # publish_mode: editorial_workflow
 i18n:
   structure: multiple_folders
