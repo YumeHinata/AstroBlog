@@ -5,7 +5,7 @@ media_folder: "/src/content/posts/images" # 文件将被存储在仓库中的位
 
 collections:
   - name: "Posts" # 用于路由，例如，/admin/collections/blog
-    label: "posts" # 在 UI 中使用
+    label: "文章" # 在 UI 中使用
     folder: "src/content/posts" # 存储文档的文件夹路径
     create: true # 允许用户在此集合中创建新文档
     fields: # 每个文档的字段，通常在 front matter 中
@@ -14,20 +14,27 @@ collections:
       - { label: "描述", name: "description", widget: "text", required: false }
       - { label: "封面图片", name: "image", widget: "image", default: "https://rdimg.yumehinata.com/random-wallpaper"}
       - { label: "标签", name: "tags", widget: "list", required: false }
-      - { label: "分类", name: "category", widget: "string", required: false }
+      - { label: "分类", name: "category", widget: "relation", value_field: "slug", search_fields: ["bi-ji", "hua-tu", "bao-lun"]}
       - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
       - { label: "正文", name: "body", widget: "richtext" }
       # - { label: "正文", name: "body", widget: "vditor-markdown" }
     media_folder: "/src/content/posts/images/{{slug}}" # 文件将被存储在仓库中的位置
     public_folder: "./images/{{slug}}" # 上传媒体文件的 src 属性
-  - name: "Chess"
-    label: "chess"
-    folder: "public/chess"
-    create: true
-    icon: "chess"
+  - name:  "category"
+    label: "分类"
+    icon: "category"
     fields:
-      - { label: "文件", name: "file", widget: "file" }
-      - { label: "正文", name: "body", widget: "code" }
+      - { label: Slug , name: "slug", widget: "string" }
+      - { label: "笔记", name: "bi-ji", widget: "string" }
+      - { label: "画图", name: "hua-tu", widget: "string"}
+      - { label: "暴论", name: "bao-lun", widget: "string"}
+  - name: "Config"
+    label: "配置文件"
+    file: "public/admin/config.yml"
+    format: raw
+    icon: "tune"
+    fields:
+      - { label: "config.json", name: "body", widget: "code",output_code_only: true,allow_language_selection: false, default_language: yml}
 
 # publish_mode: editorial_workflow
 i18n:
