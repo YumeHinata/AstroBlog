@@ -27,13 +27,18 @@ collections:
     fields:
       - { label: "分类名称", name: "title", widget: "string", required: true }
       - { label: "分类别名", name: "slug", widget: "string", required: true }
+    icon: "category"
   - name: "Config"
     label: "配置文件"
-    files: "public/admin/config.yml"
-    format: raw
+    files:
+      - name: "config"
+        label: "配置文件"
+        file: "public/admin/config.yml"
+        format: raw
+        fields:
+        - { label: "config.json", name: "body", widget: "code",output_code_only: true,allow_language_selection: false, default_language: yml}
     icon: "tune"
-    fields:
-      - { label: "config.json", name: "body", widget: "code",output_code_only: true,allow_language_selection: false, default_language: yml}
+    
 
 # publish_mode: editorial_workflow
 i18n:
