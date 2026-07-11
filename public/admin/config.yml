@@ -20,15 +20,7 @@ collections:
       # - { label: "正文", name: "body", widget: "vditor-markdown" }
     media_folder: "/src/content/posts/images/{{slug}}" # 文件将被存储在仓库中的位置
     public_folder: "./images/{{slug}}" # 上传媒体文件的 src 属性
-  - name:  "category"
-    label: "分类"
-    icon: "category"
-    folder: "src/content/posts"
-    fields:
-      - { label: Slug , name: "slug", widget: "string" }
-      - { label: "笔记", name: "bi-ji", widget: "string" }
-      - { label: "画图", name: "hua-tu", widget: "string"}
-      - { label: "暴论", name: "bao-lun", widget: "string"}
+  
   - name: "Config"
     label: "配置文件"
     file: "public/admin/config.yml"
