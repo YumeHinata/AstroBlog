@@ -23,6 +23,7 @@ collections:
   - name:  "category"
     label: "分类"
     icon: "category"
+    folder: "src/content/posts"
     fields:
       - { label: Slug , name: "slug", widget: "string" }
       - { label: "笔记", name: "bi-ji", widget: "string" }
