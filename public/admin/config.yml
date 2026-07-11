@@ -14,16 +14,23 @@ collections:
       - { label: "描述", name: "description", widget: "text", required: false }
       - { label: "封面图片", name: "image", widget: "image", default: "https://rdimg.yumehinata.com/random-wallpaper"}
       - { label: "标签", name: "tags", widget: "list", required: false }
-      - { label: "分类", name: "category", widget: "relation", value_field: "slug", search_fields: ["bi-ji", "hua-tu", "bao-lun"]}
+      - { label: "分类", name: "category", widget: "relation", collection: "Categories",value_field: "slug",display_fields: ["title"],search_fields: ["title"]}
       - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
       - { label: "正文", name: "body", widget: "richtext" }
       # - { label: "正文", name: "body", widget: "vditor-markdown" }
     media_folder: "/src/content/posts/images/{{slug}}" # 文件将被存储在仓库中的位置
     public_folder: "./images/{{slug}}" # 上传媒体文件的 src 属性
-  
+  - name: "Categories"
+    label: "分类管理"
+    folder: "src/content/categories" # 存放分类文件的独立文件夹
+    create: true                     # 允许你在后台随时新增、修改或删除分类
+    slug: "{{slug}}"
+    fields:
+      - { label: "分类名称", name: "title", widget: "string", required: true }
+      - { label: "分类别名", name: "slug", widget: "string", required: true }
   - name: "Config"
     label: "配置文件"
-    file: "public/admin/config.yml"
+    files: "public/admin/config.yml"
     format: raw
     icon: "tune"
     fields:
