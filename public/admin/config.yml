@@ -36,7 +36,7 @@ collections:
         file: "/public/admin/config.yml"
         format: yaml
         fields:
-        - { label: "config.yml", name: "body", widget: "code" , output_code_only: true ,allow_language_selection: false, default_language: "yaml"}
+        - { label: "config.yml", name: "body", widget: "markdown"}
     icon: "tune"
     
 
