@@ -34,9 +34,9 @@ collections:
       - name: "sveltia_config"
         label: "config.yml"
         file: "/public/admin/config.yml"
-        format: raw
+        format: yaml
         fields:
-        - { label: "config.yml", name: "body", widget: "text"}
+        - { label: "config.yml", name: "body", widget: "code" , output_code_only: true ,allow_language_selection: false, default_language: "yaml"}
     icon: "tune"
     
 
