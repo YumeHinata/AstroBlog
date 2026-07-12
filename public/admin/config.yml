@@ -36,7 +36,7 @@ collections:
         file: "/public/admin/config.yml"
         format: raw
         fields:
-        - { label: "config.yml", name: "body", widget: "markdown"}
+        - { label: "config.yml", name: "body", widget: "code"}
     icon: "tune"
     
 
