@@ -427,7 +427,7 @@ case "$1" in
 esac
 ```
 
-[下载uu_router.sh](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E4%BB%8Efake-ip%E6%A8%A1%E5%BC%8F%E4%B8%8Bopenclash%E6%89%8B%E9%87%8C%E6%8A%A2%E5%9B%9Euu%E5%8A%A0%E9%80%9F%E5%99%A8%E6%8F%92%E4%BB%B6%E4%BB%A3%E7%90%86%E7%9A%84%E6%B8%B8%E6%88%8F%E6%B5%81%E9%87%8F/uu_route.sh "uu_router.sh")
+[下载uu_router.sh](https://fastly.jsdelivr.net/gh/YumeHinata/AstroBlog@main/src/content/posts/images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E4%BB%8Efake-ip%E6%A8%A1%E5%BC%8F%E4%B8%8Bopenclash%E6%89%8B%E9%87%8C%E6%8A%A2%E5%9B%9Euu%E5%8A%A0%E9%80%9F%E5%99%A8%E6%8F%92%E4%BB%B6%E4%BB%A3%E7%90%86%E7%9A%84%E6%B8%B8%E6%88%8F%E6%B5%81%E9%87%8F/uu_route.sh "uu_router.sh")
 
 ## 使用说明：
 
