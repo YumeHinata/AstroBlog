@@ -1,7 +1,7 @@
 ---
 title: 【笔记】从Fake-ip模式下Openclash手里抢回UU加速器插件代理的游戏流量
 published: 2026-08-10
-description: 这个需求比较奇怪，但是绝对不小众，幻梦看到有很多人遇到Openclash影响uu加速器工作的问题，但是通常的修复办法就是修改Openclash的配置项，这当然比较有效，但是如果我不想修改配置呢？这篇文章是我后续发布的一个内容的前菜，希望大家喜欢。
+description: 这个需求比较奇怪，但是绝对不小众，幻梦看到有很多人遇到Openclash影响uu加速器工作的问题，但是通常的修复办法就是修改Openclash的配置项，这当然比较有效，但是如果不想修改配置呢？这篇文章是幻梦后续发布的一个内容的前菜，希望大家喜欢。
 image: https://rdimg.yumehinata.com/random-wallpaper
 tags:
   - Openclash
