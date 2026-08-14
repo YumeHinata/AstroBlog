@@ -2,7 +2,7 @@
 title: 【开箱即用】Docker+Qemu在IstoreOS_x86运行NX30pro定制UU加速器插件
 published: 2026-08-13
 description: 幻梦整了一个新活，通过qemu进行模拟，在IsroteOS上运行NX30pro的定制UU加速器插件，实现PC、手机游戏加速功能的解锁。
-image: https://rdimg.yumehinata.com/random-wallpaper
+image: https://pximg.yumehinata.com/img-master/img/2026/01/17/00/28/00/140018479_p0_master1200.jpg
 tags:
   - NX30pro
   - UU
