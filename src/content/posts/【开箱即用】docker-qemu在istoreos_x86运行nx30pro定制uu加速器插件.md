@@ -13,6 +13,8 @@ category: 笔记
 draft: false
 ---
 
+封面图：[https://www.pixiv.net/artworks/140018479](https://www.pixiv.net/artworks/140018479)
+
 ## 声明：
 
 这个版本是Deepseek辅助搓出来的，主要开发贡献者是DS，目前仅能够日常使用，有没有更多的bug还不知道。**这个项目仅为学习Qemu和Docker使用，请勿进行盈利，尊重网易的知识产权。**
