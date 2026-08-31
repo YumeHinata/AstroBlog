@@ -9,7 +9,8 @@ extraction → import → fix → build → verify pipeline.
 | File | Purpose |
 |---|---|
 | `index.html` | Entry page (1024×576 canvas) |
-| `Build/chess-v0.1.2.{loader.js, framework.js, wasm, data}` | The Unity WebGL player |
+| `Build/chess-v0.1.2.{loader.js, framework.js.gz, wasm.gz, data.gz}` | The Unity WebGL player (Gzip-compressed) |
+| `_headers` | EdgeOne Pages response headers (`Content-Encoding: gzip` etc.) |
 | `TemplateData/` | Unity WebGL template assets |
 | `CHANGELOG.md` | Full change log (Phases A–E) |
 
@@ -28,6 +29,30 @@ for the first frame; the build targets WebGL 2.0).
 **Cache note:** Unity caches the `.data` file in the browser's IndexedDB (`UnityCache`).
 After deploying a new build, do a hard refresh or clear site data, otherwise the old data
 file may be served.
+
+## Under 25 MB per file (e.g. EdgeOne Pages)
+
+The build is shipped **Gzip-compressed** so no single file exceeds 25 MB (an upload-size
+limit EdgeOne Pages enforces — it aborts the build if any file is larger). `.wasm` was
+29.4 MB raw; it is now `chess-v0.1.2.wasm.gz` at **7.8 MB**, and `data.gz` is **17 MB**
+(raw 21.9 MB). **No slicing or reassembly is needed — Unity's compression alone satisfies
+the limit.**
+
+Because the compressed `loader.js` does **not** decompress in JS, the files must be served
+so the correct `Content-Encoding` reaches the browser, or the game will not start:
+
+- **`chess-v0.1.2.wasm.gz`** → `Content-Encoding: gzip`, `Content-Type: application/wasm`
+- **`chess-v0.1.2.data.gz`** → `Content-Encoding: gzip`, `Content-Type: application/octet-stream`
+- **`chess-v0.1.2.framework.js.gz`** → `Content-Encoding: gzip`, `Content-Type: application/javascript`
+
+Use the bundled **`_headers`** file for EdgeOne Pages (Cloudflare-Pages-compatible); it sets
+these headers automatically. If EdgeOne Pages already serves `.gz` with
+`Content-Encoding: gzip` you can leave it out. The launcher's `createUnityInstance` config
+points at the `.gz` URLs. Local testing with `work/scripts/serve.mjs` sets these headers too.
+
+> If a host cannot set per-file `Content-Encoding`, use an EdgeOne Function to add it for the
+> three `.gz` requests — the common failure symptom is `Content-Type`/`Content-Encoding`
+> mismatch (the wasm arriving as `application/gzip` instead of `application/wasm`).
 
 ## Launcher page (`index.html`)
 

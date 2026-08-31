@@ -83,9 +83,9 @@
     .theme:hover { color: var(--text); transform: rotate(15deg); border-color: var(--accent); }
 
     .panel { position: absolute; top: 0; left: 0; right: 0; visibility: hidden; opacity: 0; pointer-events: none; z-index: 0; }
-    .panel.active { position: relative; top: auto; left: auto; right: auto; visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; animation: rise .45s cubic-bezier(.2,.7,.2,1); }
+    .panel.active { position: relative; top: auto; left: auto; right: auto; visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; animation: rise .4s ease; }
     main { position: relative; }
-    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+    @keyframes rise { from { opacity: 0; } to { opacity: 1; } }
 
     .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lg); overflow: hidden; position: relative; max-width: 1026px; margin-left: auto; margin-right: auto; }
     .card::after { content: ""; position: absolute; left: 0; top: 0; height: 5px; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, transparent); }
@@ -235,7 +235,7 @@
       else { d.style.cssText = 'background:' + (type === 'warning' ? '#d8a94d' : 'transparent') + ';padding:10px;'; setTimeout(function () { d.parentNode && d.parentNode.removeChild(d); }, 5000); }
     }
     var buildUrl = 'Build';
-    var config = { dataUrl: buildUrl + '/chess-v0.1.2.data', frameworkUrl: buildUrl + '/chess-v0.1.2.framework.js', codeUrl: buildUrl + '/chess-v0.1.2.wasm', streamingAssetsUrl: 'StreamingAssets', companyName: 'BakeryGirl.Chess', productName: 'Chess', productVersion: 'v0.1.2', showBanner: banner };
+    var config = { dataUrl: buildUrl + '/chess-v0.1.2.data.gz', frameworkUrl: buildUrl + '/chess-v0.1.2.framework.js.gz', codeUrl: buildUrl + '/chess-v0.1.2.wasm.gz', streamingAssetsUrl: 'StreamingAssets', companyName: 'BakeryGirl.Chess', productName: 'Chess', productVersion: 'v0.1.2', showBanner: banner };
 
     // (re)create a fresh canvas each load so re-loading after Quit() works cleanly
     function freshCanvas() {
@@ -296,6 +296,31 @@
       var p1 = document.getElementById('unityPlayer'); if (p1) p1.innerHTML = '';
       originalLoaded = false;
     }
+
+    // ---------- devicePixelRatio change -> re-sync the legacy plugin ----------
+    // The 2015 Unity Web Player plugin does not handle DPR changes (moving the
+    // browser between monitors of different scale/zoom, or changing zoom). That
+    // can distort the whole page and offset the game's input. When the original
+    // plugin is active and DPR changes, reload it so it re-syncs to the new
+    // pixel density; otherwise just force a reflow.
+    var __uniDpr = window.devicePixelRatio || 1;
+    function watchDpr() {
+      var dpr = window.devicePixelRatio || 1;
+      if (dpr !== __uniDpr) {
+        __uniDpr = dpr;
+        void document.body.offsetHeight; // reflow at the new density
+        if (currentMode === 'original' && originalLoaded) {
+          unloadOriginal();
+          setTimeout(function () { if (currentMode === 'original') initOriginal(); }, 80);
+        }
+      }
+      var m = window.matchMedia('(resolution: ' + dpr + 'dppx)');
+      var h = function () { watchDpr(); };
+      if (m.addEventListener) m.addEventListener('change', h, { once: true });
+      else if (m.addListener) m.addListener(h);
+    }
+    window.addEventListener('resize', watchDpr);
+    watchDpr();
   </script>
     }
 </body>

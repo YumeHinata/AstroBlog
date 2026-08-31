@@ -1,0 +1,17 @@
+# EdgeOne Pages response headers for the Unity WebGL Gzip-compressed build.
+# Unity's loader.js does NOT decompress in JS: it reads the response's
+# "Content-Encoding" header, the browser auto-decompresses the .gz bytes,
+# and the loader gets the raw wasm/data/framework. So these files MUST be
+# served with the matching Content-Encoding and the wasm with
+# Content-Type: application/wasm, or the game will not start.
+/Build/chess-v0.1.2.wasm.gz
+  Content-Type: application/wasm
+  Content-Encoding: gzip
+
+/Build/chess-v0.1.2.data.gz
+  Content-Type: application/octet-stream
+  Content-Encoding: gzip
+
+/Build/chess-v0.1.2.framework.js.gz
+  Content-Type: application/javascript
+  Content-Encoding: gzip
