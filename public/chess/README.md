@@ -9,8 +9,7 @@ extraction → import → fix → build → verify pipeline.
 | File | Purpose |
 |---|---|
 | `index.html` | Entry page (1024×576 canvas) |
-| `Build/chess-v0.1.2.{loader.js, framework.js.gz, wasm.gz, data.gz}` | The Unity WebGL player (Gzip-compressed) |
-| `_headers` | EdgeOne Pages response headers (`Content-Encoding: gzip` etc.) |
+| `Build/chess-v0.1.2.{loader.js, framework.js, wasm, data}` | The Unity WebGL player |
 | `TemplateData/` | Unity WebGL template assets |
 | `CHANGELOG.md` | Full change log (Phases A–E) |
 
@@ -32,38 +31,18 @@ file may be served.
 
 ## Under 25 MB per file (e.g. EdgeOne Pages)
 
-The build is shipped **Gzip-compressed** so no single file exceeds 25 MB (an upload-size
-limit EdgeOne Pages enforces — it aborts the build if any file is larger). `.wasm` was
-29.4 MB raw; it is now `chess-v0.1.2.wasm.gz` at **7.8 MB**, and `data.gz` is **17 MB**
-(raw 21.9 MB). **No slicing or reassembly is needed — Unity's compression alone satisfies
-the limit.**
+The build is shipped **uncompressed** so every raw file is <25 MB (an upload-size limit
+EdgeOne Pages enforces — it aborts the build if any file is larger). This is achieved by
+`stripEngineCode = true` (removes unused engine modules): `chess-v0.1.2.wasm` dropped from
+**29.4 MB → 23.9 MB**, `chess-v0.1.2.data` is 21.7 MB, `framework.js` 388 KB, `loader.js`
+24 KB. **No slicing is needed, and no `Content-Encoding`/`_headers`/Function is required** —
+these are plain static files, so they work on EdgeOne Pages as-is.
 
-Because the compressed `loader.js` does **not** decompress in JS, the files must be served
-so the correct `Content-Encoding` reaches the browser, or the game will not start:
-
-- **`chess-v0.1.2.wasm.gz`** → `Content-Encoding: gzip`, `Content-Type: application/wasm`
-- **`chess-v0.1.2.data.gz`** → `Content-Encoding: gzip`, `Content-Type: application/octet-stream`
-- **`chess-v0.1.2.framework.js.gz`** → `Content-Encoding: gzip`, `Content-Type: application/javascript`
-
-Use the bundled **`_headers`** file for EdgeOne Pages (Cloudflare-Pages-compatible); it sets
-these headers automatically. If EdgeOne Pages already serves `.gz` with
-`Content-Encoding: gzip` you can leave it out. The launcher's `createUnityInstance` config
-points at the `.gz` URLs. Local testing with `work/scripts/serve.mjs` sets these headers too.
-
-> **Astro blog `public/` deployment:** drop the whole `deploy/*` tree into `public/chess/` (so
-> the game lives under `/chess/`). `Astro` copies `public/` verbatim, which also copies
-> `chess/_headers` — EdgeOne Pages reads it and applies the `Content-Encoding` rules to
-> `/chess/Build/*` (a static `_headers` config, not a Function, so it works from an Astro
-> build without EdgeOne Functions). The `index.html` auto-detects its folder via a `<base>`
-> tag, so it works whether the URL is `/chess` or `/chess/` (no trailing slash needed).
-
-> If a host cannot set per-file `Content-Encoding` (e.g. it ignores `_headers` and Functions
-> are unavailable), switch to the **uncompressed** build: set
-> `PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled` and enable
-> `PlayerSettings.stripEngineCode = true`, rebuild, and re-stage the raw `.wasm`/`.data`
-> (target wasm <25 MB). No `Content-Encoding` is then needed at all. The common failure
-> symptom to watch for is `Content-Type`/`Content-Encoding` mismatch (the wasm arriving as
-> `application/gzip` instead of `application/wasm`).
+> Why not Gzip: Unity's compressed build needs the server to send `Content-Encoding: gzip`
+> for the `.gz` files (the loader does not decompress in JS). EdgeOne Pages serving an Astro
+> `public/` build does **not** add that header (verified — it returns `application/octet-stream`
+> with no `Content-Encoding`), and no EdgeOne Function is available, so Gzip cannot be served
+> correctly here.
 
 ## Launcher page (`index.html`)
 

@@ -250,7 +250,7 @@
       else { d.style.cssText = 'background:' + (type === 'warning' ? '#d8a94d' : 'transparent') + ';padding:10px;'; setTimeout(function () { d.parentNode && d.parentNode.removeChild(d); }, 5000); }
     }
     var buildUrl = 'Build';
-    var config = { dataUrl: buildUrl + '/chess-v0.1.2.data.gz', frameworkUrl: buildUrl + '/chess-v0.1.2.framework.js.gz', codeUrl: buildUrl + '/chess-v0.1.2.wasm.gz', streamingAssetsUrl: 'StreamingAssets', companyName: 'BakeryGirl.Chess', productName: 'Chess', productVersion: 'v0.1.2', showBanner: banner };
+    var config = { dataUrl: buildUrl + '/chess-v0.1.2.data', frameworkUrl: buildUrl + '/chess-v0.1.2.framework.js', codeUrl: buildUrl + '/chess-v0.1.2.wasm', streamingAssetsUrl: 'StreamingAssets', companyName: 'BakeryGirl.Chess', productName: 'Chess', productVersion: 'v0.1.2', showBanner: banner };
 
     // (re)create a fresh canvas each load so re-loading after Quit() works cleanly
     function freshCanvas() {
