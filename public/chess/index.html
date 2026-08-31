@@ -1,6 +1,21 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+  <script>
+  // The game can be served under a sub-path (e.g. https://host/chess/) — often straight
+  // from an Astro blog's public/. When the address bar omits the trailing slash, the
+  // browser resolves relative URLs (jquery.js, Build/*, ...) against the *site root* and
+  // they 404. Emit a <base> for the game's own folder so every relative asset URL (both
+  // the HTML script tags and the JS fetch of Build/*.gz) resolves there, whether the
+  // URL is "/chess", "/chess/", "/chess/index.html" or even locally at "/".
+  (function () {
+    var p = location.pathname || "/";
+    if (/\.html?$/i.test(p)) p = p.replace(/[^/]*$/, "");      // strip a trailing filename
+    var base = p.charAt(p.length - 1) === "/" ? p : (p ? p + "/" : "/");
+    if (base === "//") base = "/";
+    document.write('<base href="' + base + '">');
+  })();
+  </script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>少女前线 · 战术棋</title>

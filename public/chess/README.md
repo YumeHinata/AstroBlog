@@ -50,9 +50,20 @@ these headers automatically. If EdgeOne Pages already serves `.gz` with
 `Content-Encoding: gzip` you can leave it out. The launcher's `createUnityInstance` config
 points at the `.gz` URLs. Local testing with `work/scripts/serve.mjs` sets these headers too.
 
-> If a host cannot set per-file `Content-Encoding`, use an EdgeOne Function to add it for the
-> three `.gz` requests — the common failure symptom is `Content-Type`/`Content-Encoding`
-> mismatch (the wasm arriving as `application/gzip` instead of `application/wasm`).
+> **Astro blog `public/` deployment:** drop the whole `deploy/*` tree into `public/chess/` (so
+> the game lives under `/chess/`). `Astro` copies `public/` verbatim, which also copies
+> `chess/_headers` — EdgeOne Pages reads it and applies the `Content-Encoding` rules to
+> `/chess/Build/*` (a static `_headers` config, not a Function, so it works from an Astro
+> build without EdgeOne Functions). The `index.html` auto-detects its folder via a `<base>`
+> tag, so it works whether the URL is `/chess` or `/chess/` (no trailing slash needed).
+
+> If a host cannot set per-file `Content-Encoding` (e.g. it ignores `_headers` and Functions
+> are unavailable), switch to the **uncompressed** build: set
+> `PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled` and enable
+> `PlayerSettings.stripEngineCode = true`, rebuild, and re-stage the raw `.wasm`/`.data`
+> (target wasm <25 MB). No `Content-Encoding` is then needed at all. The common failure
+> symptom to watch for is `Content-Type`/`Content-Encoding` mismatch (the wasm arriving as
+> `application/gzip` instead of `application/wasm`).
 
 ## Launcher page (`index.html`)
 
