@@ -17,7 +17,6 @@ collections:
       - { label: "分类", name: "category", widget: "relation", collection: "Categories", value_field: "slug", display_fields: ["title"], search_fields: ["title"]}
       - { label: "草稿状态", name: "draft", widget: "boolean", default: false }
       - { label: "正文", name: "body", widget: "richtext" }
-      # - { label: "正文", name: "body", widget: "vditor-markdown" }
     media_folder: "/src/content/posts/images/{{slug}}" # 文件将被存储在仓库中的位置
     public_folder: "./images/{{slug}}" # 上传媒体文件的 src 属性
   - name: Categories
@@ -29,6 +28,8 @@ collections:
       - { label: "分类别名", name: "slug", widget: "string", required: true }
     icon: "category"
   - name: "Config"
+    editor: 
+      - preview": false,
     label: "Sveltia配置文件"
     files:
       - name: "sveltia_config"
