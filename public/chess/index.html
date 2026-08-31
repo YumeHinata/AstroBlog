@@ -1,164 +1,302 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<!-- saved from url=(0041)http://www.girls-frontline.com/chess.html -->
-<html xmlns="http://www.w3.org/1999/xhtml">
-
+<!DOCTYPE html>
+<html lang="zh-CN">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>少女前线 · 战术棋</title>
+  <link rel="shortcut icon" href="TemplateData/favicon.ico">
+  <style>
+    :root {
+      --bg: #eef0f1;
+      --bg-2: #f6f7f8;
+      --surface: #ffffff;
+      --surface-2: #f3f4f5;
+      --text: #26292e;
+      --muted: #868d95;
+      --accent: #d97a3c;      /* game orange */
+      --accent-2: #c46a30;    /* deeper orange */
+      --accent-soft: #fbeadf;
+      --line: #dfe2e5;
+      --shadow: 0 3px 16px rgba(35,40,46,.08);
+      --shadow-lg: 0 16px 50px rgba(35,40,46,.16);
+      --radius: 14px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #141619; --bg-2: #1a1d21; --surface: #1d2024; --surface-2: #181b1f;
+        --text: #eceff2; --muted: #99a0a8; --accent: #e79a50; --accent-2: #f0aa62;
+        --accent-soft: #2c2016; --line: #2d3237;
+        --shadow: 0 3px 16px rgba(0,0,0,.4); --shadow-lg: 0 16px 50px rgba(0,0,0,.55);
+      }
+    }
+    [data-theme="dark"] {
+      --bg: #141619; --bg-2: #1a1d21; --surface: #1d2024; --surface-2: #181b1f;
+      --text: #eceff2; --muted: #99a0a8; --accent: #e79a50; --accent-2: #f0aa62;
+      --accent-soft: #2c2016; --line: #2d3237;
+      --shadow: 0 3px 16px rgba(0,0,0,.4); --shadow-lg: 0 16px 50px rgba(0,0,0,.55);
+    }
 
-	<title>少女前线-战术棋v0.1.2 beta</title>
-	<script type="text/javascript" async="" src="./少女前线-战术棋v0.1.2 beta_files/ga.js"></script>
-	<script type="text/javascript" src="./少女前线-战术棋v0.1.2 beta_files/jquery.min.js"></script>
-	<script type="text/javascript"
-		src="https://webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject2.js"></script>
-	<!-- <script type="text/javascript">
-		var unityObjectUrl = "https://webplayer.unity3d.com/download_webplayer-3.x/3.0/uo/UnityObject2.js";
-		// if (document.location.protocol == 'https:')
-		// 	unityObjectUrl = unityObjectUrl.replace("http://", "https://ssl-");
-		// document.write('<script type="text\/javascript" src="' + unityObjectUrl + '"><\/script>');
-	</script> -->
-	<script type="text/javascript" src="./少女前线-战术棋v0.1.2 beta_files/UnityObject2.js"></script>
-	<script type="text/javascript">
-		var config = {
-			width: 1024,
-			height: 576,
-			params: { enableDebugging: "0" }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; min-height: 100%; }
+    body {
+      font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 55%, transparent), transparent 45%),
+        linear-gradient(315deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 42%);
+      background-size: 100% 100%;
+      transition: background .4s ease, color .4s ease;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-2); }
 
-		};
-		var u = new UnityObject2(config);
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 22px 48px; }
 
-		jQuery(function () {
+    /* Postmodern hero (gray base + orange accents) */
+    .hero { position: relative; padding: 46px 0 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap; }
+    .hero::before, .hero::after { content: ""; position: absolute; pointer-events: none; z-index: 0; }
+    .hero::before {
+      right: -110px; top: -60px; width: 340px; height: 340px; border-radius: 50%;
+      border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+      box-shadow: 0 0 0 24px color-mix(in srgb, var(--accent) 9%, transparent), 0 0 0 48px color-mix(in srgb, var(--accent) 5%, transparent);
+      opacity: .7;
+    }
+    .hero::after { right: 150px; top: 66px; width: 1px; height: 130px; background: linear-gradient(var(--accent-2), transparent); transform: rotate(24deg); opacity: .5; }
+    .hero .brand { position: relative; z-index: 1; }
+    .eyebrow { font-size: 12px; letter-spacing: .5em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; font-weight: 700; }
+    .hero h1 {
+      margin: 0; font-size: clamp(30px, 5vw, 54px); line-height: 1.02; letter-spacing: -.02em; font-weight: 850;
+      background: linear-gradient(100deg, var(--text) 28%, var(--accent) 58%, var(--accent-2) 78%);
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 1px 1px color-mix(in srgb, var(--text) 14%, transparent));
+    }
+    .hero .tagline { margin: 10px 0 0; color: var(--muted); font-size: 14px; letter-spacing: .16em; text-transform: uppercase; }
+    .hero .brand .en { color: var(--accent-2); font-weight: 700; }
 
-			var $missingScreen = jQuery("#unityPlayer").find(".missing");
-			var $brokenScreen = jQuery("#unityPlayer").find(".broken");
-			$missingScreen.hide();
-			$brokenScreen.hide();
+    .controls { position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; }
+    .switch { display: inline-flex; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 5px; box-shadow: var(--shadow); position: relative; }
+    .switch .slider { position: absolute; top: 5px; bottom: 5px; border-radius: 999px; background: var(--accent); transition: all .32s cubic-bezier(.6,.05,.2,1); left: 5px; width: 50%; z-index: 0; }
+    .switch button { position: relative; z-index: 1; border: 0; background: transparent; color: var(--muted); padding: 8px 20px; border-radius: 999px; font-size: 14px; font-weight: 650; cursor: pointer; font-family: inherit; transition: color .25s; }
+    .switch button.active { color: #fff; }
+    .theme { border: 1px solid var(--line); background: var(--surface); color: var(--muted); width: 42px; height: 42px; border-radius: 50%; cursor: pointer; font-size: 17px; display: grid; place-items: center; transition: all .3s; box-shadow: var(--shadow); }
+    .theme:hover { color: var(--text); transform: rotate(15deg); border-color: var(--accent); }
 
-			u.observeProgress(function (progress) {
-				switch (progress.pluginStatus) {
-					case "broken":
-						$brokenScreen.find("a").click(function (e) {
-							e.stopPropagation();
-							e.preventDefault();
-							u.installPlugin();
-							return false;
-						});
-						$brokenScreen.show();
-						break;
-					case "missing":
-						$missingScreen.find("a").click(function (e) {
-							e.stopPropagation();
-							e.preventDefault();
-							u.installPlugin();
-							return false;
-						});
-						$missingScreen.show();
-						break;
-					case "installed":
-						$missingScreen.remove();
-						break;
-					case "first":
-						break;
-				}
-			});
-			u.initPlugin(jQuery("#unityPlayer")[0], "https://www.yumehinata.com/chess/chess-v0.1.2.unity3d");
-		});
-	</script>
-	<style type="text/css">
-		<!--
-		body {
-			font-family: Helvetica, Verdana, Arial, sans-serif;
-			background-color: white;
-			color: black;
-			text-align: center;
-		}
+    .panel { position: absolute; top: 0; left: 0; right: 0; visibility: hidden; opacity: 0; pointer-events: none; z-index: 0; }
+    .panel.active { position: relative; top: auto; left: auto; right: auto; visibility: visible; opacity: 1; pointer-events: auto; z-index: 1; animation: rise .45s cubic-bezier(.2,.7,.2,1); }
+    main { position: relative; }
+    @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 
-		a:link,
-		a:visited {
-			color: #000;
-		}
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-lg); overflow: hidden; position: relative; max-width: 1026px; margin-left: auto; margin-right: auto; }
+    .card::after { content: ""; position: absolute; left: 0; top: 0; height: 5px; width: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2) 60%, transparent); }
 
-		a:active,
-		a:hover {
-			color: #666;
-		}
+    /* game stage (shared between rebuild & original) */
+    .stage { background: var(--surface-2); min-height: 380px; }
+    .stage .embed { position: relative; }
+    /* original Unity Web Player: game renders as a fixed 1024x576 window anchored to the
+       <embed>; give it an exactly-1024px slot and center it so it never shifts/clips. */
+    #unityPlayer { width: 1024px; margin: 0 auto; text-align: center; }
+    #unityPlayer embed, #unityPlayer object { display: block; margin: 0 auto; }
+    #unity-canvas { display: none; width: 100%; height: auto; background: #000; }
+    #unity-loading-bar { padding: 56px 40px; display: flex; flex-direction: column; align-items: center; gap: 18px; position: relative; }
+    .loader-mark { width: 62px; height: 62px; position: relative; }
+    .loader-mark::before, .loader-mark::after { content:""; position:absolute; border-radius:50%; inset:0; }
+    .loader-mark::before { border: 2px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-top-color: var(--accent); animation: spin 1.1s linear infinite; }
+    .loader-mark::after { inset:15px; border: 2px dashed var(--accent-2); opacity:.5; animation: spin 2.4s linear infinite reverse; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #unity-progress-bar-empty { width: 340px; max-width: 84%; height: 7px; border-radius: 999px; background: color-mix(in srgb, var(--accent) 18%, var(--line)); overflow: hidden; }
+    #unity-progress-bar-full { width: 0%; height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width .25s ease; }
+    #unity-warning { position: absolute; left: 0; right: 0; top: 0; text-align: center; }
+    .unity-foot { display:flex; justify-content: space-between; align-items:center; padding: 12px 16px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; }
+    .unity-foot .fs { border:1px solid var(--line); background:var(--surface-2); color:var(--muted); border-radius:10px; padding:6px 14px; cursor:pointer; font-size:12px; font-family:inherit; transition:all .2s; }
+    .unity-foot .fs:hover { color:var(--text); border-color:var(--accent); }
 
-		p.header {
-			font-size: small;
-		}
+    /* compact note below the game (both versions) */
+    .note { margin: 15px 0 0; color: var(--muted); font-size: 13px; text-align: center; line-height: 1.75; }
+    .note b { color: var(--text); }
+    .note a { color: var(--accent); font-weight: 650; }
 
-		p.header span {
-			font-weight: bold;
-		}
-
-		p.footer {
-			font-size: x-small;
-		}
-
-		div.content {
-			margin: auto;
-			width: 1024px;
-		}
-
-		div.broken,
-		div.missing {
-			margin: auto;
-			position: relative;
-			top: 50%;
-			width: 193px;
-		}
-
-		div.broken a,
-		div.missing a {
-			height: 63px;
-			position: relative;
-			top: -31px;
-		}
-
-		div.broken img,
-		div.missing img {
-			border-width: 0px;
-		}
-
-		div.broken {
-			display: none;
-		}
-
-		div#unityPlayer {
-			cursor: default;
-			height: 576px;
-			width: 1024px;
-		}
-
-		div.developerInfo {
-			font-size: small;
-		}
-
-		div.developerInfo a {
-			color: red;
-		}
-		-->
-	</style>
+    /* original plugin notice (shown in modern browsers) */
+    .plugin-note {
+      background: color-mix(in srgb, var(--accent-2) 10%, transparent); border: 1px solid color-mix(in srgb, var(--accent-2) 28%, transparent);
+      padding: 13px 16px; border-radius: 12px; font-size: 13px; color: var(--text); margin-top: 14px; text-align: left; line-height: 1.75;
+    }
+    .plugin-note b { color: var(--accent-2); }
+  </style>
 </head>
-
 <body>
-	<p class="header"><span>战术棋v0.1.2 beta</span></p>
-	<div class="content">
-		<div id="unityPlayer"><embed src="https://www.yumehinata.com/chess/chess-v0.1.2.unity3d"
-				type="application/vnd.unity" width="1024" height="576"
-				firstframecallback="UnityObject2.instances[0].firstFrameCallback();" enabledebugging="0"
-				style="display: block; width: 1024px; height: 576px;"></div>
-	</div>
-	<p class="footer">« created with <a href="http://unity3d.com/unity/" title="Go to unity3d.com">Unity</a> »</p>
-	<div class="developerInfo">
-		<p>《少女前线-战术棋》还处于测试当中，可能存在着预料不到的问题，制作组会尽快修复(ง •̀_•́)ง</p>
-		<p>战术棋讨论群484251181，如果遇到BUG或者有意见建议请发送邮件至
-			<a href="mailto:cs@wave-game.com">cs@wave-game.com</a>
-		</p>
-		<p>最后祝各位游戏愉快o(*≧▽≦)ツ</p>
-		<p>返回<a href="http://www.girls-frontline.com/">《少女前线》官网</a></p>
-	</div>
+  <div class="wrap">
+    <header class="hero">
+      <div class="brand">
+        <div class="eyebrow">GRIFFON · KRIEGEPIEL</div>
+        <h1>少女前线 · 战术棋</h1>
+        <p class="tagline">Tactical Chess — <span class="en">v0.1.2</span></p>
+      </div>
+      <div class="controls">
+        <div class="switch" id="switch">
+          <div class="slider" id="slider"></div>
+          <button data-version="rebuild" class="active">重置版</button>
+          <button data-version="original">原版</button>
+        </div>
+        <button class="theme" id="theme-toggle" title="切换主题" aria-label="切换主题">🌙</button>
+      </div>
+    </header>
 
+    <main>
+      <!-- Rebuild (WebGL) -->
+      <section id="panel-rebuild" class="panel active">
+        <div class="card stage">
+          <div id="unity-container">
+            <canvas id="unity-canvas" width=1024 height=576 tabindex="-1"></canvas>
+            <div id="unity-loading-bar">
+              <div class="loader-mark"></div>
+              <div id="unity-progress-bar-empty"><div id="unity-progress-bar-full"></div></div>
+              <div class="note">正在加载重置版 · 请稍候…</div>
+            </div>
+            <div id="unity-warning"></div>
+            <div class="unity-foot"><span>Chess · WebGL 重建版</span><button class="fs" id="unity-fullscreen-button" type="button">⛶ 全屏</button></div>
+          </div>
+        </div>
+        <p class="note"><b>重置版说明</b> · 本版由原版完整迁移至 Unity WebGL，现代浏览器可直接运行，并修复了原版的精灵/UI 渲染与敌方 AI 卡死等问题。长时间停在加载条请 <b>强制刷新 / 清缓存</b>。</p>
+      </section>
 
+      <!-- Original (Unity Web Player) -->
+      <section id="panel-original" class="panel">
+        <div class="card stage">
+          <div id="unityPlayer" class="embed"><!-- UnityObject2 embeds here --></div>
+          <div class="unity-foot"><span>Chess · Unity Web Player 原版</span></div>
+        </div>
+        <p class="note">
+          《少女前线-战术棋》还处于测试当中，可能存在着预料不到的问题，制作组会尽快修复(ง •̀_•́)ง　·　战术棋讨论群 <b>484251181</b>，BUG 或建议请发邮件至 <b>cs@wave-game.com</b>　·　最后祝各位游戏愉快 o(*≧▽≦)ツ　·　<a href="https://www.girls-frontline.com/" target="_blank" rel="noopener">↗ 返回《少女前线》官网</a>
+        </p>
+      </section>
+    </main>
+  </div>
+
+  <script src="jquery.min.js"></script>
+  <script src="UnityObject2.js"></script>
+  <script>
+    // ---------- Theme (auto + manual) ----------
+    var themeMode = 'auto';
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var themeBtn = document.getElementById('theme-toggle');
+    function applyTheme() {
+      document.documentElement.removeAttribute('data-theme');
+      if (themeMode === 'dark') document.documentElement.setAttribute('data-theme','dark');
+      else if (themeMode === 'light') document.documentElement.setAttribute('data-theme','light');
+      var dark = themeMode === 'dark' || (themeMode === 'auto' && mq.matches);
+      themeBtn.textContent = dark ? '☀️' : '🌙';
+      themeBtn.title = dark ? '切到白天' : '切到夜间';
+    }
+    themeBtn.addEventListener('click', function () {
+      var dark = themeMode === 'dark' || (themeMode === 'auto' && mq.matches);
+      themeMode = dark ? 'light' : 'dark'; applyTheme();
+    });
+    if (mq.addEventListener) mq.addEventListener('change', function () { if (themeMode === 'auto') applyTheme(); });
+    applyTheme();
+
+    // ---------- Version switch ----------
+    var slider = document.getElementById('slider');
+    var switchBtns = document.querySelectorAll('#switch button');
+    var panels = { rebuild: document.getElementById('panel-rebuild'), original: document.getElementById('panel-original') };
+    function placeSlider() {
+      var a = [].find.call(switchBtns, function (b) { return b.classList.contains('active'); });
+      if (a) { slider.style.left = a.offsetLeft + 'px'; slider.style.width = a.offsetWidth + 'px'; }
+    }
+    var webglLoaded = false, originalLoaded = false, currentMode = 'rebuild';
+
+    function show(v) {
+      if (v === currentMode) return;
+      switchBtns.forEach(function (b) { b.classList.toggle('active', b.dataset.version === v); });
+      Object.keys(panels).forEach(function (k) { panels[k].classList.toggle('active', k === v); });
+      placeSlider();
+      // unload the currently active game -> stops its audio and removes the plugin window
+      if (currentMode === 'rebuild') unloadWebgl();
+      else if (currentMode === 'original') unloadOriginal();
+      // load the newly selected game
+      if (v === 'rebuild') loadWebgl();
+      else if (v === 'original') initOriginal();
+      currentMode = v;
+    }
+    switchBtns.forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.version); }); });
+    window.addEventListener('resize', placeSlider);
+    requestAnimationFrame(placeSlider);
+
+    // ---------- Unity WebGL (rebuild) ----------
+    var canvas = document.getElementById('unity-canvas');
+    var loadingBar = document.getElementById('unity-loading-bar');
+    var progressBarFull = document.getElementById('unity-progress-bar-full');
+    var fullscreenButton = document.getElementById('unity-fullscreen-button');
+    var warningBanner = document.getElementById('unity-warning');
+    var unityInstance = null;
+    function banner(msg, type) {
+      var d = document.createElement('div'); d.innerHTML = msg; warningBanner.appendChild(d);
+      if (type === 'error') d.style.cssText = 'background:#e05656;color:#fff;padding:10px;';
+      else { d.style.cssText = 'background:' + (type === 'warning' ? '#d8a94d' : 'transparent') + ';padding:10px;'; setTimeout(function () { d.parentNode && d.parentNode.removeChild(d); }, 5000); }
+    }
+    var buildUrl = 'Build';
+    var config = { dataUrl: buildUrl + '/chess-v0.1.2.data', frameworkUrl: buildUrl + '/chess-v0.1.2.framework.js', codeUrl: buildUrl + '/chess-v0.1.2.wasm', streamingAssetsUrl: 'StreamingAssets', companyName: 'BakeryGirl.Chess', productName: 'Chess', productVersion: 'v0.1.2', showBanner: banner };
+
+    // (re)create a fresh canvas each load so re-loading after Quit() works cleanly
+    function freshCanvas() {
+      var old = document.getElementById('unity-canvas');
+      var nc = document.createElement('canvas');
+      nc.id = 'unity-canvas'; nc.width = 1024; nc.height = 576; nc.tabIndex = -1; nc.style.display = 'none';
+      if (old && old.parentNode) old.parentNode.replaceChild(nc, old);
+      return nc;
+    }
+    function loadWebgl() {
+      canvas = freshCanvas();
+      loadingBar = document.getElementById('unity-loading-bar');
+      progressBarFull = document.getElementById('unity-progress-bar-full');
+      if (loadingBar) loadingBar.style.display = ''; if (progressBarFull) progressBarFull.style.width = '0%';
+      var s = document.createElement('script'); s.src = buildUrl + '/chess-v0.1.2.loader.js';
+      s.onload = function () {
+        createUnityInstance(canvas, config, function (p) { if (progressBarFull) progressBarFull.style.width = (100 * p) + '%'; })
+          .then(function (ui) {
+            unityInstance = ui; webglLoaded = true;
+            if (loadingBar) loadingBar.style.display = 'none'; canvas.style.display = 'block';
+            fullscreenButton.onclick = function () { ui.SetFullscreen(1); };
+          })
+          .catch(function (m) { if (loadingBar) loadingBar.innerHTML = '<div class="note">加载失败：' + m + '</div>'; });
+      };
+      document.body.appendChild(s);
+    }
+    function unloadWebgl() {
+      try { if (unityInstance && unityInstance.Quit) unityInstance.Quit(); } catch (e) {}
+      unityInstance = null; webglLoaded = false;
+    }
+    loadWebgl(); // rebuild is the default active tab
+
+    // ---------- Unity Web Player (original) ----------
+    function hasUnityWebPlayer() {
+      try {
+        var n = navigator.plugins ? (navigator.plugins.length || 0) : 0;
+        for (var i = 0; i < n; i++) if (/unity/i.test((navigator.plugins[i].name || ''))) return true;
+      } catch (e) {}
+      return false;
+    }
+    function initOriginal() {
+      originalLoaded = true;
+      var p1 = document.getElementById('unityPlayer');
+      if (!hasUnityWebPlayer()) {
+        p1.innerHTML = '<div class="note">当前浏览器不支持 Unity Web Player 插件，无法加载原版。<br>请使用 <b>360 浏览器</b> 等仍支持插件的内核，或切换到「重置版」。</div>';
+        return;
+      }
+      try {
+        var u2 = new UnityObject2({ width: 1024, height: 576, params: { enableDebugging: "0" } });
+        window.__u2 = u2;
+        u2.initPlugin(p1, 'chess-v0.1.2.unity3d');
+      } catch (e) {
+        p1.innerHTML = '<div class="note">原版加载组件不可用，请切换到「重置版」。</div>';
+      }
+    }
+    function unloadOriginal() {
+      try { if (window.__u2 && window.__u2.getUnity) { var un = window.__u2.getUnity(); if (un && un.Stop) un.Stop(); } } catch (e) {}
+      var p1 = document.getElementById('unityPlayer'); if (p1) p1.innerHTML = '';
+      originalLoaded = false;
+    }
+  </script>
+    }
 </body>
-
 </html>

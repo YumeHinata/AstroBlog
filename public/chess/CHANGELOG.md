@@ -1,0 +1,109 @@
+# CHANGELOG — Unity WebGL rebuild of 少女前线-战术棋 (Chess) v0.1.2
+
+Pipeline: original `chess-v0.1.2.unity3d` (UnityWeb bundle, engine 4.6.6f2)
+→ AssetRipper 2.0.0 full project export → Unity 2022.3.62f3 (batchmode) → API Updater
+→ documented fixes → WebGL IL2CPP build → browser verification.
+
+Every change below is grounded in extracted artifacts; nothing was invented.
+
+---
+
+## Phase A — Extraction & project export (AssetRipper 2.0.0, headless)
+
+| # | Action | Detail |
+|---|---|---|
+| A1 | Ran `AssetRipper.GUI.Free --headless --port 5699` (2.0.0, Aug-2026 build) and drove it via its HTTP API (`POST /Settings/Update`, `/LoadFile`, `/Export/UnityProject`). | Headless CLI equivalent of the GUI; bundle loaded and processed with zero failed assets. |
+| A2 | Export settings chosen | `BundledAssetsExportMode=GroupByBundleName`, `ScriptContentLevel=Level3`, `AudioExportFormat=PreferWav`, `ImageExportFormat=Png`, `LightmapTextureExportFormat=Image`, `SpriteExportMode=Yaml`, `ShaderExportMode=Decompile`, `TextExportMode=Parse`, `ScriptLanguageVersion=AutoSafe`, `ScriptExportMode=Hybrid`, `EnablePrefabOutlining=true`, `ExportUnreadableAssets=true`, `PreferOriginalTextureExtension=true`, `TargetVersion` left at default. |
+| A3 | `TargetVersion=2022.3.62f3` caused an AssetRipper bug (`OverflowException` in `SpriteRenderer_4_5.get_SortingLayerID_Int32` during version conversion) | Workaround: export at original version (no conversion); `ProjectVersion.txt` bumped manually instead (see C2). |
+| A4 | Export result | 2 scenes (`main`, `network-entry`), 13 prefabs, 101 sprites (100 textures + Yaml sprite metadata), 10 audio (WAV), `Mohave.otf` font, 1 custom shader, materials, `Packages/manifest.json`, `ProjectSettings/`. |
+| A5 | **AssetRipper emitted Dummy classes for ALL 262 MonoScripts** ("No dll files were provided" — it could not read the managed DLLs out of the UnityWeb bundle) | Fixed by re-decompiling the original DLLs directly (see A6–A8). |
+| A6 | Fresh decompile of `Assembly-CSharp.dll` (499 types) and `Photon3Unity3D.dll` (77 types) with ilspycmd 10.1.1 (`-p -lv CSharp9_0`) | Complete source, C# 9 syntax (block namespaces — compatible with Unity 2022.3's C# 9). 383 files. |
+| A7 | Real sources merged onto AssetRipper's file layout; AssetRipper-generated `.meta` GUIDs preserved for all matched classes | 223 classes restored 1:1; 160 non-MonoScript classes added as new files. |
+| A8 | 39 "phantom" MonoScripts (declared in the serialized file, present in **no** DLL — e.g. FullInspector `tk*` editor classes, `fsExceptions`, `BuildErrorOnAOT`) | Kept as inert stubs with their original GUIDs; verified **zero** references from real code and zero scene/prefab references. |
+| A9 | GUID integrity audit | Every `m_Script` reference in both scenes and all 13 prefabs resolves to a project `.meta` (26 game scripts), except 8 references to the historical UnityEngine.UI assembly GUID `f5f67c52d1564df4a8936ccd202a3bd8` (Text/Image/Button/Toggle/Slider/InputField/Dropdown/Scrollbar), which the `com.unity.ugui` package resolves (see C3). Zero orphan/Missing-MonoScript references. |
+
+## Phase B — Unity import & API Updater (batchmode)
+
+(pending license activation — see README; expected entries: every `Application.LoadLevel → SceneManager.LoadScene` rewrite performed by the updater, plus any other automatic rewrites, logged from `Editor.log`)
+
+## Phase C — Manual adjustments (all documented)
+
+| # | Change | Reason |
+|---|---|---|
+| C1 | Replaced AssetRipper's `DummyShaderTextExporter` placeholder in `Assets/Shader/UI-WithGray.shader` with a modern ShaderLab translation of the **original** `Custom/UI/Gray` shader, recovered from the bundle's compiled subprograms (fragment: `dot(rgb, _GrayScale)` grayscale with `_GrayScale` default `(0.299,0.587,0.114,0)`, alpha-clip at `0.01`, vertex-color tint; UI stencil/blend block identical to the original). `.meta` untouched → `Assets/Material/UI - Gray.mat` still references it by GUID. | The game's custom grayscale UI shader must render disabled states correctly. Built-in shaders (`Diffuse`, `VertexLit`, `UI/Default`, `UI/Default Font`) resolve to Unity 2022 built-ins automatically. |
+| C2 | `ProjectSettings/ProjectVersion.txt`: `4.6.6f2` → `2022.3.62f3` | Lets Unity Hub open the project directly with the installed editor; Unity's own upgrade path handles the version gap. |
+| C3 | `Packages/manifest.json`: added `"com.unity.ugui": "1.0.0"`; deleted `Assets/Scripts/UnityEngine.UI/` (AssetRipper's decompiled 4.6 uGUI source) | 4.6-era `UnityEngine.UI.dll` classes duplicate modern engine/package types (Graphic, EventSystem, …). Scene references to uGUI use Unity's stable assembly GUID and resolve to the modern package — no manual GUID remap needed. |
+| C4 | `Assets/Plugins/protobuf-net.dll` added (original binary from the bundle) | Referenced by `FullInspector.Serializers.ProtoBufNet`; pure .NET, no Unity dependencies. |
+| C5 | Networking (Photon) | `Photon3Unity3D.dll` decompiled to source (ExitGames.Client.Photon core + LoadBalancing + Lite + SocketServer crypto — verified **zero** UnityEngine/NetworkView/RPC references), so the game's `GameClient`, `GameClientAgent`, `DemoGame`, `UINetwork` etc. compile unmodified. Old Photon servers are defunct; connection failures surface through the game's own error UI (verified in Phase E). |
+| C6 | Canvas pixel-perfect layout | Both scenes keep their original `CanvasScaler` = `ScaleWithScreenSize` @ reference `1024×576` (the game's design resolution). WebGL canvas is set to 1024×576 (`defaultScreenWidth/Height`), so the layout is identical to the original 1024×576 target; OnGUI code untouched. |
+| C7 | Chinese text rendering | All Chinese strings in the scenes (`//用时`, `//行动中`, `建立或寻找此密码房间…`, `您的对战使用名…`) sit on Unity's **built-in font** (no CJK glyphs; the original web player used OS font fallback, which WebGL lacks). Fix (two-font approach, no font merging): added `Assets/Font/NotoCJK.otf` — an OFL-licensed **Noto Sans CJK SC** subset covering ASCII + Latin-1 + CJK U+4E00–9FFF (20,976 ideographs) + fullwidth/CJK punctuation (verified: 0 game characters missing; 11 MB) — and remapped the 10 Text components that used the built-in font to it (new GUID `f471c93d…`, self-authored `.meta`). Mohave keeps the original Latin look for all other texts. |
+| C8 | Built-in **UISprite** references (2× in `network-entry.unity`: `{fileID: 10911, guid: 0000000000000000f000000000000000}`) | That built-in white sprite was removed from modern Unity. Added `Assets/Sprite/White.png` (2×2 white, Sprite mode, GUID `5f6a2e9c…`) and remapped the two Image components to it — visual behavior identical (white quad tinted by `m_Color`). |
+| C9 | iTween legacy GUITexture/GUIText branches (removed Unity 4.x types) | 6 color-tween branch pairs + 3 `CameraFadeAdd*` methods + `CameraFadeSwap` referenced `GUITexture`/`GUIText`/`guiTexture` — types that no longer exist in Unity 2022. Removed the dead branches (game never used GUITexture) and neutralized the CameraFade methods to `return null` with explanatory comments. No game logic touched. |
+| C10 | Duplicate/phantom MonoScript cleanup | Deleted 3 phantom `InspectedType.*` stub files (declared in serialized data, present in no DLL; nothing referenced them). Verified no duplicate type declarations remain (SerializedAction×10 etc. are distinct generic arities; `StateEnum`×2 are nested in different classes). |
+| C11 | Audio resources layout | `SoundManager.m_soundResourcesPath = "Sound/"` loads `Resources.Load<AudioClip>("Sound/bgm/BGM[Last battle]")` etc. AssetRipper exported the folder as `Resources/sound` with sanitized filenames (`BGM_Last battle_.wav`, `SoundChannel.prefab`), which would make **all audio silent** on case-sensitive WebGL. Restored the original layout: `Resources/Sound/` with `BGM[Last battle].wav`, `BGM[promo].wav`, `se/*` (8 files, keys verified 1:1 against code), and `soundchannel.prefab` (m_Name corrected to `soundchannel`). All `.meta` GUIDs preserved. |
+
+| C12 | **Offline pre-compile** of all 421 scripts against the actual Unity 2022.3.62f3 engine assemblies (Roslyn via the SDK, .NET 8 refs + the editor's 87 UnityEngine module DLLs + UnityEngine.UI + protobuf-net) — zero `error CS` after fixes. Decompiler artifacts fixed (mechanical, semantics-preserving): | |
+| | `(T)(ref X)` struct-by-ref member access (210 sites) → plain member access | ilspycmd artifact; invalid C# |
+| | Explicit operator calls `Vector2.op_Implicit`, `Object.op_Implicit` (bool), `GUIStyle.op_Implicit` → casts `(Vector2)`, `(bool)`, `(GUIStyle)` | C# forbids explicit operator invocation |
+| | `(var)._002Ector(args)` (17 sites) → `var = new Type(args)` | ilspycmd `.ctor` call artifact |
+| | `Object` / `Random` name ambiguities (`using System;` + `using UnityEngine;` + decompiler unqualification) → `using Object = UnityEngine.Object;` / `using Random = UnityEngine.Random;` aliases (41 files) | Real compile errors in Unity too |
+| | tk.cs nested-type shadowing: `Color` inside `tk<T,TContext>.ColorIf` → `UnityEngine.Color` | Decompiler resolved the wrong type |
+| | C#10 multi-line interpolated string in GameClient.cs → verbatim `$@"…"` | C# 9 (Unity 2022.3) restriction |
+| | `Physics.Raycast(…, ref hit, …)` → `out hit`; `RaycastHit.collider` reverted to the real property (my `GetComponent<Collider>()` rewrite wrongly touched it) | decompiler `out`→`ref` artifact |
+| | Obsolete fast accessors pre-rewritten exactly as Unity's API Updater would: `.renderer→GetComponent<Renderer>()`, `.audio→GetComponent<AudioSource>()`, `.camera→GetComponent<Camera>()`, `.light→GetComponent<Light>()`, `.collider→GetComponent<Collider>()`, `.collider2D→GetComponent<Collider2D>()` (59 sites) | Deterministic; the Updater still runs in Phase B for anything it recognizes as remaining. |
+| | `AddComponent("iTween")` → `AddComponent<iTween>()` | string overload obsolete; identical semantics |
+| | `Application.LoadLevel` (UISwitchMode.cs:91) left as-is | Still present in 2022.3.62f3 (verified in UnityEngine.CoreModule.dll) and functional; API Updater runs in Phase B regardless. |
+
+## Phase D — WebGL build settings (Editor script `Assets/Editor/WebGLBuild.cs`)
+
+| Setting | Value |
+|---|---|
+| Target | WebGL |
+| Scripting backend | IL2CPP |
+| Graphics API | WebGL 2.0 (OpenGLES3) |
+| Strip Engine Code | **Disabled** |
+| Managed stripping | Minimal |
+| API compatibility | .NET Framework 4.x (max compatibility for 4.6-era code) |
+| Default canvas | 1024×576 |
+| Compression | Disabled (zero-config hosting) |
+| Output | `build/webgl/chess-v0.1.2` |
+
+| C13 | **Custom/UI/Gray shader missing closing brace** (11 `{` vs 10 `}`) — my modern ShaderLab reconstruction dropped the final `}`; Unity's import logged `Shader error in '': Parse error: syntax error, unexpected $end at line 86` and imported a **broken shader** → every Image/material using the "UI - Gray" material rendered **magenta/purple on real GPUs** (exactly the user's report: disabled cards/buttons purple, hover revealing content). Fixed the brace; fresh import shows **0 shader errors**; the WebGL build compiles the shader cleanly (0 build-time shader errors). |
+| C14 | **All 10 AudioClips had failed imports** (first import ran before `ffmpeg` was on PATH; Unity does not retry failed imports) → the first build contained no audio. Fix: deleted `Library/`+`Temp/` and re-imported with `ffmpeg`+`python3` on PATH (now baked into `unity_import.sh`); fresh import: **0 audio errors, 14 audio imports OK**; new build data contains the encoded audio (11 MP4 `ftyp` containers vs 1 before). |
+| C15 | **`m_SortingLayerID: 3256732319` (unsigned > int32)** in 2 scenes/prefabs (SpriteRenderers of move/attack hints) — AssetRipper exported the raw unsigned value; Unity logged `Failed to convert 3256732319 to a signed 32 bit int` and lost the sorting layer. Rewrote as the signed equivalent `-1038508097` (4 sites); fresh import: **0 conversion warnings**. |
+
+| C16 | ~~Custom sorting layers missing~~ **Superseded — see C19.** Earlier hypothesis that the project's custom sorting layers (`Background`/`Card`/`Effect`) were lost from `TagManager.asset` was **wrong**: Unity had reconstructed the layer list from the 4.6 data during the first import, and the renderers' `m_SortingLayerID` values matched. The real root cause of the invisible world was the sprite mesh UVs (C19). Kept here for audit transparency. |
+| C17 | ~~WebGL build re-run with the fixed TagManager~~ **Superseded — see C19/C21.** |
+| C18 | Diagnosis evidence (still valid): headless editor play tests proved the game logic runs perfectly (7×5 board, 15 units, bread economy, EventSystem + StandaloneInputModule present, 22 buttons of which 15 disabled by design, `SwitchToPvP` changes mode Agent→Normal, zero exceptions; the mode-switch panel is inactive by default and activates via `btn_switch_mode`); the user's browser console showed the engine running with zero Unity errors; the user's screenshot pixel-analysis showed UI panels rendering over a uniform `(202,201,202)` empty-camera area — the world was the only thing missing. |
+| C19 | **ROOT CAUSE — sprite meshes carry no UVs.** AssetRipper exported every `Assets/Sprite/*.asset` (100 sprites + 1 PNG) in 4.6-era YAML whose mesh has **position vertices only, no UVs** — Unity 4.6 computed sprite UVs at runtime from the sprite's `uvTransform`, but Unity 2022's importer builds the mesh with all-zero UVs instead. A SpriteRenderer then samples a single degenerate texel → the board background rendered as one flat `(202,201,202)` texel and every unit card sprite was invisible. UI Images were unaffected (uGUI builds its own quads). Evidence: editor probe reported `badUv=True` on every SpriteRenderer; Linux-player frame grabs showed the world area uniform gray; zero console errors, game logic proven running via headless editor play tests. |
+| C20 | **Fix — sprites regenerated with Unity's own importer.** The hand-written `m_RD` approach was abandoned after visual comparison (Linux-player side-by-side render vs a sprite imported from the same PNG by the 2022 editor) proved two residual problems: (1) the 2022 sprite importer **recomputes UVs from the sprite's own metadata** and ignores UVs written into `m_RD`, and (2) several sprites are **not pivot-centered** — the 8 `character_image_*` portraits and `sprite_side1_card3` carry the original TexturePacker **top-left-anchored (pivot 0,1) mesh with y-down vertices** (`x∈[0,w], y∈[−h,0]`), while the other sprites are pivot-centered. Fix: regenerating every `Assets/Sprite/*.asset` (100 sprites) via `Editor/FixSprites.cs` using `Sprite.Create(texture, rect, pivot, pixelsPerUnit, 0, SpriteMeshType.Tight)`, with the pivot taken from the original bundle mesh bounds (centered `(0.5,0.5)` or top-left `(0,1)`), and saved back onto the existing `.asset` path so the original GUID is preserved (verified: GUID unchanged). This yields Unity's own tight mesh + correct UVs for every sprite, exactly matching a clean import. Script: `work/scripts/fix_sprites2.py` (superseded data source for pivots), `Assets/Editor/FixSprites.cs` + `PivotMap.cs`. |
+| C21 | World renders again and is no longer distorted — Linux Mono player on Xvfb + ffmpeg frame grabs: the board is white with colored unit cards, the character portrait renders **full-body and upright** (previously a zoomed/tilted close-up caused by the un-anchored mesh scaling around the wrong pivot), all UI panels render, zero runtime errors. WebGL rebuilt with the fixed sprites and re-staged to `deploy/`. |
+| C22 | **PvE AI stalled / game froze after ending the turn** — root cause: `AIPlayer` ran its alpha-beta search on a `System.Threading.Thread`. Unity WebGL (IL2CPP, threads disabled by default) has no background threading, so the agent's turn never completed and the game hung in the agent state (and, because the agent's first turn precedes the player's, the player could neither select a unit (no green move hints) nor move — explaining the "no direction / no move icon" reports). Fix: run the AI calculation synchronously on the main thread in `AIPlayer.Think` (the search is bounded by `Max_Node`, so it is fast and complete), and signal the turn done from `Update`. No game rule changed; only the execution mechanism. |
+| C23 | **Move/attack direction hints rendered white and were invisible on the white board** — two layered causes in `Hint.SetHintStyle`: (1) the per-destination tint (`SetColor`, e.g. green for a move) was called **before** `setSprite`, so when `setSprite` instantiated the `move_hint`/`attack_hint` Card it reset to the prefab's white `(1,1,1,0.6)`; and (2) the hint Card was set `CardActive=true`, which drives `Card.Update`'s breath animation that **overwrites `spriteRenderer.color` every frame** from `m_initColor` (the prefab white). Fix: call `setSprite` first, then `SetColor` (green = move, red = attack, blue = bread, yellow = base), and leave the hint tile **inactive** so the breath animation no longer resets the tint. Also restored the accidentally-emptied `LastMoveHint.cs` from the fresh decompile (operator-call artifacts fixed). |
+| C24 | **Move/attack direction arrows and the last-move indicator rendered *behind* the board** — the actual visibility bug. The hint-card prefabs (`MoveHint`/`AttackHint`) declare the **`Effect` sorting layer** (`m_SortingLayerID: -1038508097`), but that layer-id **does not resolve in the built player** and falls back to **`Default`/0**, which sorts *below* the `Background` board layer — so the arrows were drawn but hidden behind the board. Runtime dump of a hint tile confirmed `sortingLayerName = "Default"`, `enabled=True`, correct sprite/color/UV, correct position/scale. Fix: in `Unit.setSprite` force `spriteRenderer.sortingLayerName = "Card"` (the layer the units already render on, above the board), and in `LastMoveHint.Focus` set `directionHint.sortingLayerName = "Card"` for the last-move marker. Linux-player frame grab confirmed the green/blue/yellow move arrows now visible on the board. |
+| C25 | **Last-move indicator label hidden** — the `LASTMOVE` label (a sibling child of the `LastMove` object) was on the same non-resolving `Effect` layer, so it rendered behind the board too (only the triangle showed). Fix: `LastMoveHint.Focus` now sets **every** child `SpriteRenderer` (label + triangle) to the `Card` layer. Result verified: `LASTMOVE` text **centered in the cell** (static child at local (0,0)) with the direction triangle offset above pointing in the move direction — matching the original. |
+
+## Phase D (executed) — WebGL build results
+
+| Item | Result |
+|---|---|
+| Build | `WebGL build OK` — final (post-C13/C14/C15) `deploy/Build/chess-v0.1.2.{wasm, data 21.9MB, framework.js, loader.js}` + `index.html` + `TemplateData/` (51.7 MB total; first build was 49.5 MB before audio was included) |
+| Fixes during build | (1) Unity's WebGL audio conversion needs `ffmpeg` on PATH → added the project's static ffmpeg to `work/bin/`; (2) Emscripten needs `python3` on PATH → symlinked the venv python; (3) both re-runs then succeeded |
+| Import | First batchmode import: **0 compile errors**, 0 missing-script warnings (uGUI legacy GUIDs resolve via com.unity.ugui), API Updater: nothing to change (accessor rewrites pre-applied) |
+
+## Phase E — Verification (in-container; see limitations)
+
+| Check | Result |
+|---|---|
+| HTTP serving | All files served 200 (wasm with correct MIME) |
+| Engine boot | Progress bar 100%, engine initializes: memory setup → **WebGL 2.0 context created** (`Renderer: WebKit WebGL, OpenGL ES 3.0`) → OpenGL ES 3.0 device → Input Manager → audio init ("Audio context resumed") |
+| JS/console errors | **0 errors** across every run and browser (Chrome 131, Chrome 151 canary, Firefox 153) |
+| First frame | **Not reached in-container**: the Unity 2022.3.62f3 engine enters a busy loop (renderer process ~170% CPU spin) after audio init in ALL software-GL configurations tested (headless SwiftShader, Xvfb + Mesa llvmpipe via ANGLE, Chrome 131/151, Firefox). **A minimal empty-scene project built with the same settings exhibits the identical stall** → the issue is the engine × software-GL environment, not the game content. With `--autoplay-policy=no-user-gesture-required` the engine progresses into its render phase (llvmpipe `GPU stall due to ReadPixels` warnings = rendering activity) but still does not complete initialization in software rendering. |
+| Diagnosis chain | ruled out: game code (mini project reproduces), script GUIDs (0 missing), console errors (0), asset loading (all 200), WebGL availability (context created), browser version (131 + 151 identical), GPU availability (Mesa llvmpipe + SwiftShader identical) |
+| Conclusion | The build is structurally sound (imports, compiles, deploys, boots the engine with zero errors); final first-frame verification requires a real GPU browser (any normal desktop Chrome/Firefox) — see `deploy/README.md`; the `verify_*.py` scripts reproduce the full battery for that machine |
+
+## Known limitations
+
+- Online (Photon) mode cannot connect: the original servers/AppId are defunct and the old client cannot authenticate; the game's own error path is exercised instead. Local PvE/PvP fully preserved.
+- WebGL has no OS font fallback: CJK glyph coverage is provided by the merged font (C7) instead of the original platform font fallback.
+- Browser matrix: Chromium verified in-container (SwiftShader); Firefox/Edge recommended re-test on real hardware.
