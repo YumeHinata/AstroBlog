@@ -29,7 +29,7 @@ collections:
     icon: "category"
   - name: "Config"
     editor: 
-      - preview": false,
+      - { preview": false }
     label: "Sveltia配置文件"
     files:
       - name: "sveltia_config"
