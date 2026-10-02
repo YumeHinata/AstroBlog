@@ -1,5 +1,5 @@
 ---
-title: Dsh数据目录空间告急，记一次将容器数据迁移至群晖NAS的实践
+title: 【笔记】Dsh数据目录空间告急，记一次将容器数据迁移至群晖NAS的实践
 published: 2026-09-22
 description: 正在尝试移植一个安卓游戏到PSV上，结果跑了一半说无法写入了，才发现空间早已被占满。100G的小机器，不堪重压了。
 image: https://pximg.yumehinata.com/img-master/img/2026/09/12/13/15/23/149570298_p0_master1200.jpg
