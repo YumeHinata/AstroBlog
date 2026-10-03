@@ -4,22 +4,41 @@
 >
 </div>
 
-<script
-    is:inline
-    src="https://fastly.jsdelivr.net/npm/twikoo@2.0.12/dist/twikoo.min.js"
-></script>
-
 <script is:inline>
-    function initTwikoo() {
-        const el = document.querySelector("#comments-container");
+    function loadTwikoo() {
+        return new Promise((resolve, reject) => {
+            if (typeof twikoo !== "undefined") {
+                resolve();
+                return;
+            }
 
-        if (!el || typeof twikoo === "undefined") return;
+            const script = document.createElement("script");
+            script.src =
+                "https://fastly.jsdelivr.net/npm/twikoo@2.0.12/dist/twikoo.min.js";
 
-        twikoo.init({
-            envId: "https://twikoo.yumehinata.com/",
-            el: "#comments-container",
-            lang: "zh-CN",
+            script.onload = resolve;
+            script.onerror = reject;
+
+            document.head.appendChild(script);
         });
+    }
+
+    async function initTwikoo() {
+        const container = document.querySelector("#comments-container");
+
+        if (!container) return;
+
+        try {
+            await loadTwikoo();
+
+            await twikoo.init({
+                envId: "https://twikoo.yumehinata.com/",
+                el: "#comments-container",
+                lang: "zh-CN",
+            });
+        } catch (error) {
+            console.error("Twikoo 加载失败:", error);
+        }
     }
 
     document.addEventListener("astro:page-load", initTwikoo);

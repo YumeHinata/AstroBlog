@@ -73,6 +73,14 @@
         mask-image: linear-gradient(to bottom, transparent 0%, black 2rem, black calc(100% - 2rem), transparent 100%);
     }
 
+    #toc, #active-indicator {
+        max-width: 20rem;
+    }
+
+    #jump-comments {
+        margin-top: 16px;
+    }
+
     .hide-scrollbar {
         scrollbar-width: none;
         -ms-overflow-style: none;
