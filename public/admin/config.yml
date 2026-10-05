@@ -93,10 +93,10 @@ collections:
             default_language: "yaml"
 
 # 国际化
-i18n:
-  structure: multiple_folders
-  locales: ["zh-cn", "en"]
-  default_locale: "zh-cn"
+# i18n:
+  # structure: multiple_folders
+  # locales: ["zh-cn", "en"]
+  # default_locale: "zh-cn"
 
 # GitHub Backend
 backend:
