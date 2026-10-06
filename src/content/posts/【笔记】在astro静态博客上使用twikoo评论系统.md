@@ -29,4 +29,93 @@ draft: true
 
 ![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261003-193641.png)
 
-然后直接把 ZIP 上传到 Edgeone Makers上完成部署。
+直接把 ZIP 上传到 Edgeone Makers上完成部署。并在设置里对`node.js` 的版本进行调整和新增环境变量`TWIKOO_SMTP_BRIDGE_TOKEN`，值可以是一个任意复杂的字符串。
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261003-223137.png)
+
+并且绑定一个域名，由于幻梦可以用中国区的加速，所以这里的CNAME可以不管他。
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261007-002231.png)
+
+如果你也是这样的情况，那么我们通过 CDN 的方式进行代理即可。
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261007-002841.png)
+
+源站这里填写前面 CNAME 的值即可，回源的 host 头就是我们之前填写绑定的域名。之后的访问就是使用成功加速的域名。
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261007-003523.png)
+
+这样能够访问就成功了
+
+## 第二步：部署到 Fuwari 前端
+
+由于官方没有提供 Astro 的方法所以我们需要自行解决一下，这里幻梦以Fuwari为例。
+
+首先，我们新增一个`Twikoo.astro`。我们后面的大部分修改该都在这里进行，这样不会严重影响到博客本身。文件路径可以参考这个`src\components\Twikoo.astro`。
+
+```plain
+<div
+    id="comments-container"
+    class="flex card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full mt-4"
+></div>
+
+
+<script
+    is:inline
+    src="https://fastly.jsdelivr.net/npm/twikoo@2.0.12/dist/twikoo.min.js"
+></script>
+
+
+<script is:inline>
+    function initTwikoo() {
+        const container = document.getElementById("comments-container");
+
+
+        if (!container || typeof twikoo === "undefined") return;
+
+
+        if (container.dataset.twikooInitialized === "true") return;
+
+
+        container.dataset.twikooInitialized = "true";
+
+
+        twikoo.init({
+            envId: "https://twikoo.yumehinata.com/",
+            el: "#comments-container",
+            lang: "zh-CN",
+        });
+    }
+
+
+    // 首次完整加载
+    initTwikoo();
+
+
+    // Astro 客户端导航
+    document.addEventListener("astro:page-load", initTwikoo);
+</script>
+```
+
+然后我们在`src\layouts\MainGridLayout.astro`中通过`import Twikoo from "@components/Twikoo.astro";`引入文件，并在以下位置插入评论
+
+```plain
+<main
+id="swup-container"
+class="transition-swup-fade col-span-2 lg:col-span-1 overflow-hidden"
+>
+<div id="content-wrapper" class="onload-animation">
+<!-- the overflow-hidden here prevent long text break the layout-->
+<!-- make id different from windows.swup global property -->
+<slot />
+
+{showComments && <Twikoo />}
+
+<div
+class="footer col-span-2 onload-animation hidden lg:block"
+>
+<Footer />
+</div>
+</div>
+</main>
+```
