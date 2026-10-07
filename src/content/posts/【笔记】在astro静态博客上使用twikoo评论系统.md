@@ -10,7 +10,7 @@ tags:
   - Twikoo
   - 评论
 category: 笔记
-draft: true
+draft: false
 ---
 
 封面图：[https://www.pixiv.net/artworks/150379690](https://www.pixiv.net/artworks/150379690)
@@ -81,7 +81,7 @@ draft: true
 
 
         twikoo.init({
-            envId: "https://twikoo.yumehinata.com/",
+            envId: "https://这里填写如你刚刚绑定的",
             el: "#comments-container",
             lang: "zh-CN",
         });
@@ -109,7 +109,7 @@ class="transition-swup-fade col-span-2 lg:col-span-1 overflow-hidden"
 <!-- make id different from windows.swup global property -->
 <slot />
 
-{showComments && <Twikoo />}
+{showComments && <Twikoo />} //这里就是我们放评论的位置
 
 <div
 class="footer col-span-2 onload-animation hidden lg:block"
@@ -119,3 +119,53 @@ class="footer col-span-2 onload-animation hidden lg:block"
 </div>
 </main>
 ```
+
+这样我们就在文章页内加入了Twikoo评论功能。
+
+## 第三步：获取管理员权限并设置 Twikoo
+
+当首次打开 Twikoo 评论时需要及时设置管理员密码，管理员入口在评论框右下角设置按钮。
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-001141.png)
+
+设置密码并登录，我们进行以下设置
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-001418.png)
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-001637.png)
+
+填写我们的邮箱地址，当我们收到回复时可以及时发现。
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-001723.png)
+
+这里差别不大，拿 itdog 跑一下看看延迟最低的那个选择就好了
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-001756.png)
+
+这里很重要，我们设置一个口令。当我们输入这个口令后，右下角的设置图标才会出现，建议单独设置口令
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-001945.png)
+
+在官方文档里有介绍，Edgeone makers 是无法使用反垃圾功能的，但是可以先准备好，也许哪次更新后就可以用了，也可以在我的评论区里试试，到底有没有用（**别发真的广告**）
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-002221.png)
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-002307.png)
+
+最后是设置一个邮箱用于通知大家收到的回复，邮箱系统我们之前介绍过，以前的动态博客时幻梦就有准备，可以看往期内容，这里不过多介绍。[**【白嫖】使用Lark建立邮箱服务**](https://www.yumehinata.com/posts/oyeiedxp/)
+
+需要注意，如果使用支持 ssl 协议的 stmp 端口，请在`STMP_SECURE`中写上`true`
+
+**_一定，一定要记得点击保存_**
+
+**_一定要记得点击保存_**
+
+**_一定要记得点击保存_**
+
+最后再我们进行发件测试
+
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%9C%A8astro%E9%9D%99%E6%80%81%E5%8D%9A%E5%AE%A2%E4%B8%8A%E4%BD%BF%E7%94%A8twikoo%E8%AF%84%E8%AE%BA%E7%B3%BB%E7%BB%9F/QQ20261008-003637.png)
+
+到此我们的 Twikoo 基本上就部署好了，Twikoo 还有官方文档介绍了API调用的方式，不过这里就不过多写了[https://twikoo.js.org/api.html#on-twikoo-loaded](https://twikoo.js.org/api.html#on-twikoo-loaded)
+
+希望大家玩得愉快
