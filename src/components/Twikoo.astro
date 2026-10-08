@@ -1,33 +1,38 @@
-<div
-    id="comments-container"
-    class="flex card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full mt-4"
-></div>
-
 <script
     is:inline
     src="https://fastly.jsdelivr.net/npm/twikoo@2.0.12/dist/twikoo.min.js"
 ></script>
 
+<div
+    id="comments-container"
+    class="flex card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full mt-4"
+>
+</div>
+
 <script is:inline>
-    function initTwikoo() {
-        const container = document.getElementById("comments-container");
+    (() => {
+        const init = () => {
+            const container = document.getElementById("comments-container");
 
-        if (!container || typeof twikoo === "undefined") return;
+            if (!container) return;
+            if (container.dataset.twikooInitialized === "true") return;
 
-        if (container.dataset.twikooInitialized === "true") return;
+            if (typeof twikoo === "undefined") {
+                setTimeout(init, 50);
+                return;
+            }
 
-        container.dataset.twikooInitialized = "true";
+            container.dataset.twikooInitialized = "true";
 
-        twikoo.init({
-            envId: "https://twikoo.yumehinata.com/",
-            el: "#comments-container",
-            lang: "zh-CN",
-        });
-    }
+            twikoo.init({
+                envId: "https://twikoo.yumehinata.com/",
+                el: "#comments-container",
+                lang: "zh-CN",
+            });
+        };
 
-    // 首次完整加载
-    initTwikoo();
+        init();
 
-    // Astro 客户端导航
-    document.addEventListener("astro:page-load", initTwikoo);
+        document.addEventListener("astro:page-load", init);
+    })();
 </script>
