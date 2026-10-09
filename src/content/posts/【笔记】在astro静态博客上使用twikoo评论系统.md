@@ -54,46 +54,51 @@ draft: false
 首先，我们新增一个`Twikoo.astro`。我们后面的大部分修改该都在这里进行，这样不会严重影响到博客本身。文件路径可以参考这个`src\components\Twikoo.astro`
 
 ```plain
-<div
-    id="comments-container"
-    class="flex card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full mt-4"
-></div>
-
-
 <script
     is:inline
     src="https://fastly.jsdelivr.net/npm/twikoo@2.0.12/dist/twikoo.min.js"
 ></script>
 
 
+<div
+    id="comments-container"
+    class="flex card-base z-10 px-6 md:px-9 pt-6 pb-4 relative w-full mt-4"
+>
+</div>
+
+
 <script is:inline>
-    function initTwikoo() {
-        const container = document.getElementById("comments-container");
+    (() => {
+        const init = () => {
+            const container = document.getElementById("comments-container");
 
 
-        if (!container || typeof twikoo === "undefined") return;
+            if (!container) return;
+            if (container.dataset.twikooInitialized === "true") return;
 
 
-        if (container.dataset.twikooInitialized === "true") return;
+            if (typeof twikoo === "undefined") {
+                setTimeout(init, 50);
+                return;
+            }
 
 
-        container.dataset.twikooInitialized = "true";
+            container.dataset.twikooInitialized = "true";
 
 
-        twikoo.init({
-            envId: "https://这里填写如你刚刚绑定的",
-            el: "#comments-container",
-            lang: "zh-CN",
-        });
-    }
+            twikoo.init({
+                envId: "https://这里写你刚刚绑定的域名/",
+                el: "#comments-container",
+                lang: "zh-CN",
+            });
+        };
 
 
-    // 首次完整加载
-    initTwikoo();
+        init();
 
 
-    // Astro 客户端导航
-    document.addEventListener("astro:page-load", initTwikoo);
+        document.addEventListener("astro:page-load", init);
+    })();
 </script>
 ```
 
