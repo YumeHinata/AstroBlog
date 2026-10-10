@@ -140,6 +140,8 @@ const imageUrl =
                 style="--coverWidth: 28%;"
             >
             </div>
+            <div>|</div>
+            <div class="postcard-comment-count" data-path={cleanUrl}></div>
         </div>
     </div>
 
@@ -195,36 +197,115 @@ const imageUrl =
 </div>
 
 <script>
-    async function initCardViews() {
-        const targets = document.querySelectorAll(".postcard-view-count");
-        if (targets.length === 0) return;
+    const viewsJsonUrl =
+        "https://ghr.yumehinata.com/YumeHinata/GA4-Click-Statistics/refs/heads/main/data/views.json";
+
+    const commentsJsonUrl =
+        "https://ghr.yumehinata.com/YumeHinata/GA4-Click-Statistics/refs/heads/main/data/comments.json";
+
+    // 兼容中文路径、URL 编码路径，以及末尾斜杠差异
+    function getPathCandidates(input) {
+        let pathname;
 
         try {
-            // 只请求 1 次原始简洁的 json 字典
-            const res = await fetch(
-                "https://ghr.yumehinata.com/YumeHinata/GA4-Click-Statistics/refs/heads/main/data/views.json",
-            );
-            if (!res.ok) return;
-            const viewsMap = await res.json();
+            pathname = new URL(input, window.location.origin).pathname;
+        } catch {
+            pathname = String(input).split(/[?#]/, 1)[0];
+        }
 
-            // 批量匹配并填入对应卡片的阅读量
-            targets.forEach((el) => {
+        const clean = (value) =>
+            value.replace(/\/index\.html?$/i, "").replace(/\/+$/, "") || "/";
+
+        const rawPath = clean(pathname);
+        let decodedPath = rawPath;
+
+        try {
+            decodedPath = clean(decodeURI(rawPath));
+        } catch {
+            // 非标准 URL 编码时保留原路径
+        }
+
+        const encodedPath = clean(encodeURI(decodedPath));
+
+        return [...new Set([rawPath, decodedPath, encodedPath])];
+    }
+
+    function findCount(map, input) {
+        if (!map) return undefined;
+
+        for (const path of getPathCandidates(input)) {
+            if (Object.prototype.hasOwnProperty.call(map, path)) {
+                return map[path];
+            }
+        }
+
+        return undefined;
+    }
+
+    async function fetchJson(url) {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${url}`);
+        }
+
+        return response.json();
+    }
+
+    async function initCardStats() {
+        const viewTargets = document.querySelectorAll(".postcard-view-count");
+        const commentTargets = document.querySelectorAll(
+            ".postcard-comment-count",
+        );
+
+        if (!viewTargets.length && !commentTargets.length) return;
+
+        const [viewsResult, commentsResult] = await Promise.allSettled([
+            viewTargets.length
+                ? fetchJson(viewsJsonUrl)
+                : Promise.resolve(null),
+            commentTargets.length
+                ? fetchJson(commentsJsonUrl)
+                : Promise.resolve(null),
+        ]);
+
+        // 阅读量：保留原有显示逻辑
+        if (viewsResult.status === "fulfilled" && viewsResult.value) {
+            const viewsMap = viewsResult.value;
+
+            viewTargets.forEach((el) => {
                 const path = el.getAttribute("data-path");
-                if (path && viewsMap[path] !== undefined) {
-                    el.textContent = viewsMap[path] + " 次阅读";
-                } else {
-                    el.textContent = "0 次阅读";
-                }
+                const count = path ? findCount(viewsMap, path) : undefined;
+
+                el.textContent =
+                    count !== undefined ? `${count} 次阅读` : "0 次阅读";
             });
-        } catch (e) {
-            console.error("Failed to fetch GA4 views:", e);
+        } else if (viewsResult.status === "rejected") {
+            console.error("读取阅读量失败:", viewsResult.reason);
+        }
+
+        // 评论数：匹配不到时明确提示，不将未知数据伪装成 0
+        if (commentsResult.status === "fulfilled" && commentsResult.value) {
+            const commentsMap = commentsResult.value;
+
+            commentTargets.forEach((el) => {
+                const path = el.getAttribute("data-path");
+                const count = path ? findCount(commentsMap, path) : undefined;
+
+                el.textContent =
+                    count !== undefined ? `${count} 条评论` : "评论数暂不可用";
+            });
+        } else if (commentsResult.status === "rejected") {
+            console.error("读取评论数失败:", commentsResult.reason);
+            commentTargets.forEach((el) => {
+                el.textContent = "评论数暂不可用";
+            });
         }
     }
 
-    // 页面首次加载时运行
-    initCardViews();
-    // 适配 Fuwari 主题的视图切换动画 (View Transitions)
-    document.addEventListener("astro:after-swap", initCardViews);
+    // 首次加载和 Fuwari 客户端导航
+    initCardStats();
+    document.addEventListener("astro:after-swap", initCardStats);
 </script>
 
 <style define:vars={{ coverWidth }}></style>
