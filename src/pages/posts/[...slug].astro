@@ -280,8 +280,79 @@ const jsonLd = {
             }
         }
 
-        // 初始化并兼容 Fuwari 的 View Transitions 路由切换动画
+        async function loadSinglePageCommentCount() {
+            const counterEl = document.getElementById("page-comment-count");
+            if (!counterEl) return;
+
+            try {
+                const res = await fetch(
+                    "https://ghr.yumehinata.com/YumeHinata/GA4-Click-Statistics/refs/heads/main/data/comments.json",
+                );
+
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}`);
+                }
+
+                const commentsMap = await res.json();
+
+                // 获取当前文章路径
+                let currentPath = window.location.pathname;
+
+                // 去掉末尾斜杠
+                if (currentPath.endsWith("/") && currentPath !== "/") {
+                    currentPath = currentPath.slice(0, -1);
+                }
+
+                // 同时尝试编码路径和中文路径
+                const candidates = [currentPath];
+
+                try {
+                    const decodedPath = decodeURIComponent(currentPath);
+                    candidates.push(decodedPath);
+                    candidates.push(encodeURI(decodedPath));
+                } catch {
+                    // URL 解码失败时，保留原始路径
+                }
+
+                // 去重，并查找实际存在的 JSON 键
+                const matchedPath = [...new Set(candidates)].find((path) =>
+                    Object.prototype.hasOwnProperty.call(commentsMap, path),
+                );
+
+                if (matchedPath === undefined) {
+                    counterEl.textContent = "评论数暂不可用";
+
+                    console.warn(
+                        "[Twikoo] 没有匹配到当前文章：",
+                        currentPath,
+                        candidates,
+                    );
+                    return;
+                }
+
+                const count = Number(commentsMap[matchedPath]);
+
+                if (!Number.isFinite(count) || count < 0) {
+                    throw new Error(
+                        `无效的评论数：${commentsMap[matchedPath]}`,
+                    );
+                }
+
+                counterEl.textContent = `${count} 条评论`;
+            } catch (e) {
+                counterEl.textContent = "评论数暂不可用";
+                console.error("[Twikoo] 评论数获取失败:", e);
+            }
+        }
+        // 首次进入文章
         loadSinglePageView();
+        loadSinglePageCommentCount();
+
+        // 兼容 Fuwari 的 View Transitions 页面切换
         document.addEventListener("astro:after-swap", loadSinglePageView);
+        document.addEventListener(
+            "astro:after-swap",
+            loadSinglePageCommentCount,
+        );
     </script>
 </MainGridLayout>
