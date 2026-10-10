@@ -322,10 +322,19 @@ const maxLevel = siteConfig.toc.depth;
         customElements.define("table-of-contents", TableOfContents);
     }
 </script>
-<a
-    href=#comments-container
-    id="jump-comments"
-    class="px-2 flex gap-2 relative transition w-full min-h-9 rounded-xl
-        hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] py-2
-    "
-><div class="transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold bg-[var(--toc-badge-bg)] text-[var(--btn-content)]">↓</div><div class="transition text-sm text-50">前往评论区</div></a>
+{
+    isPostsRoute && (
+        <a
+            href="#comments-container"
+            id="jump-comments"
+            class="px-2 flex gap-2 relative transition w-full min-h-9 rounded-xl
+                hover:bg-[var(--toc-btn-hover)] active:bg-[var(--toc-btn-active)] py-2
+            "
+        >
+            <div class="transition w-5 h-5 shrink-0 rounded-lg text-xs flex items-center justify-center font-bold bg-[var(--toc-badge-bg)] text-[var(--btn-content)]">
+                ↓
+            </div>
+            <div class="transition text-sm text-50">前往评论区</div>
+        </a>
+    )
+}
