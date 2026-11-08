@@ -9,10 +9,11 @@ export async function onRequest(context) {
     } = context;
     const client_id = context.env.GITHUB_CLIENT_ID;
     try {
-        const url = new URL(request.url);
+        const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
+        const protocol = request.headers.get('x-forwarded-proto') || 'https';
         const redirectUrl = new URL('https://github.com/login/oauth/authorize');
         redirectUrl.searchParams.set('client_id', client_id);
-        redirectUrl.searchParams.set('redirect_uri', url.origin + '/callback');
+        redirectUrl.searchParams.set('redirect_uri', `${protocol}://${host}/callback`);
         redirectUrl.searchParams.set('scope', 'repo user');
         const stateArray = new Uint8Array(12);
         crypto.getRandomValues(stateArray);
