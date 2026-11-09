@@ -4,10 +4,6 @@
     .card-base {
         @apply rounded-[var(--radius-large)] overflow-hidden bg-[var(--card-bg)] transition;
     }
-    .card-table {
-        @apply rounded-[var(--radius-large)] overflow-hidden bg-[var(--card-bg-table)] transition;
-        display: grid;
-    }
     h1, h2, h3, h4, h5, h6, p, a, span, li, ul, ol, blockquote, code, pre, table, th, td, strong {
         @apply transition;
     }
@@ -73,14 +69,6 @@
         mask-image: linear-gradient(to bottom, transparent 0%, black 2rem, black calc(100% - 2rem), transparent 100%);
     }
 
-    #toc, #active-indicator {
-        max-width: 20rem;
-    }
-
-    #jump-comments {
-        margin-top: 16px;
-    }
-
     .hide-scrollbar {
         scrollbar-width: none;
         -ms-overflow-style: none;
@@ -97,9 +85,6 @@
     }
     .text-50 {
         @apply text-black/50 dark:text-white/50
-    }
-    .text-c9 {
-        @apply text-[#737373] dark:text-[#c9c9c9]
     }
     .text-30 {
         @apply text-black/30 dark:text-white/30

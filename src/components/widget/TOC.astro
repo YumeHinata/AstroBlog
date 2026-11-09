@@ -43,7 +43,7 @@ const maxLevel = siteConfig.toc.depth;
                         "group-hover:bg-transparent border-2 border-[var(--toc-btn-hover)] group-hover:border-[var(--toc-btn-active)] border-dashed",
                 ]}
             />
-        <table-of-contents class:list={[className, "group card-table"]}>
+        <table-of-contents class:list={[className, "group card-base"]}>
             {headings
                 .filter((heading) => heading.depth < minDepth + maxLevel)
                 .map((heading) => (

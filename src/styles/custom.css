@@ -1,0 +1,97 @@
+/* ============================================================
+   自定义样式集中文件（独立于上游 main.css / variables.styl）
+   颜色一律绑定上游主题变量，随明暗（html.dark）与色相（--hue）实时同步。
+   Twikoo 运行时注入的样式优先级高，故其覆盖使用 !important。
+   ============================================================ */
+
+/* --- 从 main.css 迁出的既有自定义规则 --- */
+.text-c9 {
+    color: #737373;
+}
+.dark .text-c9 {
+    color: #c9c9c9;
+}
+
+#toc,
+#active-indicator {
+    max-width: 20rem;
+}
+
+#jump-comments {
+    margin-top: 16px;
+}
+
+/* --- TOC 选中态：当前条目文字用主题强调色，实时跟随明暗/色相 --- */
+#toc a.visible > div:last-child {
+    color: var(--primary);
+}
+
+/* --- Twikoo 配色统一到上游主题变量 --- */
+
+/* 基础文字色：随明暗实时切换 */
+.twikoo {
+    color: rgba(0, 0, 0, 0.8) !important;
+}
+.dark .twikoo {
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 主按钮（发送）→ --primary */
+.twikoo .tk-button--primary {
+    background-color: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+.twikoo .tk-button--primary:not(.is-disabled):hover,
+.twikoo .tk-button--primary:not(.is-disabled):focus {
+    background-color: color-mix(in oklab, var(--primary), white 15%) !important;
+    border-color: color-mix(in oklab, var(--primary), white 15%) !important;
+}
+.twikoo .tk-button--primary:not(.is-disabled):active {
+    background-color: color-mix(in oklab, var(--primary), black 12%) !important;
+    border-color: color-mix(in oklab, var(--primary), black 12%) !important;
+}
+
+/* 强调色文字/图标（操作链接、排序、标签链接、聚焦边框等）→ --primary */
+.twikoo .tk-action-link,
+.twikoo .tk-action-icon,
+.twikoo .tk-actions button,
+.twikoo .tk-button--text,
+.twikoo .tk-nick-link:hover,
+.twikoo .tk-sort-item:hover,
+.twikoo .tk-sort-item.tk-active,
+.twikoo .tk-input-group__append .tk-button:hover {
+    color: var(--primary) !important;
+}
+.twikoo .tk-input__inner:focus {
+    border-color: var(--primary) !important;
+}
+
+/* 普通按钮（预览等）/ 标签 / 输入框 → 上游中性变量 */
+.twikoo .tk-button:not(.tk-button--primary):not(.tk-button--text) {
+    background-color: var(--btn-regular-bg) !important;
+    border-color: var(--line-divider) !important;
+    color: var(--btn-content) !important;
+}
+.twikoo .tk-tag {
+    background-color: var(--btn-regular-bg) !important;
+}
+.twikoo .tk-input__inner {
+    border-color: var(--line-divider) !important;
+    color: inherit !important;
+}
+.twikoo .tk-input__inner:hover {
+    border-color: var(--meta-divider) !important;
+}
+
+/* 次要文字（时间/元信息）随明暗 */
+.twikoo .tk-extras,
+.twikoo .tk-time,
+.twikoo .tk-meta {
+    color: rgba(0, 0, 0, 0.5) !important;
+}
+.dark .twikoo .tk-extras,
+.dark .twikoo .tk-time,
+.dark .twikoo .tk-meta {
+    color: rgba(255, 255, 255, 0.5) !important;
+}
