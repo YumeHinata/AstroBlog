@@ -16,17 +16,17 @@ legacyHash: 89NHQRzi
 
 shizuku的版本其实还挺多的，不考虑未在github开源的分支。没有特别需求的推荐原版的[RikkaApps/Shizuku](https://github.com/RikkaApps/Shizuku/releases)（目前原版疑似加入了无root自启动功能？）；希望能无root通过无线adb来开机自启动的推荐这个分支[pixincreate/Shizuku](https://github.com/pixincreate/Shizuku/releases)；幻梦在用的是另一位作者在以上进行二改的版本[yangFenTuoZi/Shizuku](https://github.com/yangFenTuoZi/Shizuku)，这里只是贴出来不做推荐。顺带一提现在很多作者的releases里都不是最新的安装包，得去actions里翻一下最新的文件。
 
-![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku%2BinstallerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-36-39-810_moe.shizuku.privileged.api.jpg)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku+installerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-36-39-810_moe.shizuku.privileged.api.jpg)
 
 shizuku的设置其实没什么好说的，就这个开机启动（无线调试）勾上然后根据提示启动服务就好了。
 
-![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku%2BinstallerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-39-46-149_com.miui.securitycenter.jpg)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku+installerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-39-46-149_com.miui.securitycenter.jpg)
 
-![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku%2BinstallerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-39-37-850_com.miui.securitycenter.jpg)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku+installerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-39-37-850_com.miui.securitycenter.jpg)
 
 shizuku外面的设置其实比较重要，耗电记得无限制，自启动记得打开，有些情况可能shizuku没开通知权限也要记得开起来。
 
-![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku%2BinstallerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-42-36-835_com.android.settings.jpg)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku+installerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-42-36-835_com.android.settings.jpg)
 
 开发者选项里除了在shizuku启动时会提示开启的选项，还要记得开启**usb安装、usb调试（安全设置）、停用adb授权超时功能**。
 
@@ -34,9 +34,9 @@ shizuku外面的设置其实比较重要，耗电记得无限制，自启动记�
 
 原版[iamr0s/InstallerX](https://github.com/iamr0s/InstallerX)在23年作者就停止更新归档了。不过，目前在a16版本下依旧能正常工作。在幻梦写这篇笔记的时候发现github有了一个新的分支[wxxsfxyzm/InstallerX-Revived](https://github.com/wxxsfxyzm/InstallerX-Revived)，值得关注后续维护状态。
 
-![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku%2BinstallerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-50-53-453_com.rosan.installer.x.jpg)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku+installerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-50-53-453_com.rosan.installer.x.jpg)
 
-![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku%2BinstallerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-51-45-067_com.rosan.installer.x.jpg)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E9%80%9A%E8%BF%87shizuku+installerX%E5%AE%89%E8%A3%85%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F/Screenshot_2025-10-21-02-51-45-067_com.rosan.installer.x.jpg)
 
 installerX内如此设置，设置完成记得右下角点击保存。
 
