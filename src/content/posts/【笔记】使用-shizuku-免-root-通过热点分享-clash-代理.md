@@ -13,3 +13,9 @@ draft: true
 ---
 
 封面图：[https://www.pixiv.net/artworks/147634195](https://www.pixiv.net/artworks/147634195)
+
+## 前言：
+
+首先必须得说在如今root权限获取其实已经是一件日渐简单的事情了。但是，幻梦还是固执的认为 Shizuku 获取的权限其实已经足够完成让热点流量经过 clash代理的工作。所幸，已经有前人完成了 Shizzi 这个项目，再次感谢 Shizzi 项目的开发者们的工作。
+
+所以，这个确实又是一个“Ai 融合项目”（阿里 Qoder 发赛博鸡蛋了，你还不领吗）
