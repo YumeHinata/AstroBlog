@@ -2,7 +2,7 @@
 title: 【笔记】头像绘制实战？反正把颜色上了，阴影画了
 published: 2025-09-15
 # description: "How to use this blog template."
-image: "https://openlist.yumehinata.com/d///Tianyicloud/blog/%E9%98%B4%E5%BD%B11.png?sign=acqId5jsQ_qoYYKdm-L6F98w0VPQc0EuWDO4kSJMsdI=:0"
+image: "./images/【笔记】头像绘制实战？反正把颜色上了，阴影画了/阴影1.png"
 tags: ["板绘","头像","笔记"]
 category: 画图
 draft: false
@@ -10,7 +10,7 @@ legacyHash: AlLzMh1J
 ---
 上一篇里幻梦粗草稿，它有一些严重的问题。比如头发的位置，脸的形状，缺少发饰，头饰结构缺少。
 
-![草稿3.png](https://openlist.yumehinata.com/d///Tianyicloud/blog/%E8%8D%89%E7%A8%BF3.png?sign=B0aVcSY5bcLWp9vWrvh0bQ3kXjTnmQj1xnOBlJ03M-E=:0)
+![草稿3.png](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%A4%B4%E5%83%8F%E7%BB%98%E5%88%B6%E5%AE%9E%E6%88%98%EF%BC%9F%E5%8F%8D%E6%AD%A3%E6%8A%8A%E9%A2%9C%E8%89%B2%E4%B8%8A%E4%BA%86%EF%BC%8C%E9%98%B4%E5%BD%B1%E7%94%BB%E4%BA%86/%E8%8D%89%E7%A8%BF3.png)
 
 首先，右侧下方的头发不应该凭空生出，上方应该显示出下方头发的信息，亦或是完全遮挡导致缺少信息。
 
@@ -32,18 +32,18 @@ legacyHash: AlLzMh1J
 
 所以略微改了一下
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/头像草稿.png?sign=0IJQhARXOaSCuGQUCKMYJ6H44L617rP4jH_Q-lSU0YY=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%A4%B4%E5%83%8F%E7%BB%98%E5%88%B6%E5%AE%9E%E6%88%98%EF%BC%9F%E5%8F%8D%E6%AD%A3%E6%8A%8A%E9%A2%9C%E8%89%B2%E4%B8%8A%E4%BA%86%EF%BC%8C%E9%98%B4%E5%BD%B1%E7%94%BB%E4%BA%86/%E5%A4%B4%E5%83%8F%E8%8D%89%E7%A8%BF.png)
 
 这个版本其实是我最满意的一个草稿。但是脖子有一点问题，发箍与头发衔接处还存在问题，耳朵结构存在问题(幸好耳朵不用露出来)
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/头像草稿3.png?sign=gRuK68WVVwJRzEbGr_ae5flX2yDOzV-605NDuHYT_Eg=:0)修改了脖子的问题，未解决眼睛以及留海与发箍的连接问题
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%A4%B4%E5%83%8F%E7%BB%98%E5%88%B6%E5%AE%9E%E6%88%98%EF%BC%9F%E5%8F%8D%E6%AD%A3%E6%8A%8A%E9%A2%9C%E8%89%B2%E4%B8%8A%E4%BA%86%EF%BC%8C%E9%98%B4%E5%BD%B1%E7%94%BB%E4%BA%86/%E5%A4%B4%E5%83%8F%E8%8D%89%E7%A8%BF3.png)修改了脖子的问题，未解决眼睛以及留海与发箍的连接问题
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/线稿.png?sign=Alh2lIBn-7TwPKvFzkCESO7FpHN2dWI5yIX_Dy3RipM=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%A4%B4%E5%83%8F%E7%BB%98%E5%88%B6%E5%AE%9E%E6%88%98%EF%BC%9F%E5%8F%8D%E6%AD%A3%E6%8A%8A%E9%A2%9C%E8%89%B2%E4%B8%8A%E4%BA%86%EF%BC%8C%E9%98%B4%E5%BD%B1%E7%94%BB%E4%BA%86/%E7%BA%BF%E7%A8%BF.png)
 
 修改了袖子的外观，修改了眼睛，修改了头发的样式（不过这个头发不如前面那个灵动），解决了内衣的边缘低于正常角度的问题，修复了锁骨的位置及形状
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/固有色1.png?sign=7qfIKjak65LkgKdfcNOoe8FZbPcVKahpVoY-tl2S3fc=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%A4%B4%E5%83%8F%E7%BB%98%E5%88%B6%E5%AE%9E%E6%88%98%EF%BC%9F%E5%8F%8D%E6%AD%A3%E6%8A%8A%E9%A2%9C%E8%89%B2%E4%B8%8A%E4%BA%86%EF%BC%8C%E9%98%B4%E5%BD%B1%E7%94%BB%E4%BA%86/%E5%9B%BA%E6%9C%89%E8%89%B21.png)
 
 简单上色
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/阴影1.png?sign=acqId5jsQ_qoYYKdm-L6F98w0VPQc0EuWDO4kSJMsdI=:0)加上一些阴影，不过这个阴影还是有问题，等着后面和老师沟通再做修改了
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E5%A4%B4%E5%83%8F%E7%BB%98%E5%88%B6%E5%AE%9E%E6%88%98%EF%BC%9F%E5%8F%8D%E6%AD%A3%E6%8A%8A%E9%A2%9C%E8%89%B2%E4%B8%8A%E4%BA%86%EF%BC%8C%E9%98%B4%E5%BD%B1%E7%94%BB%E4%BA%86/%E9%98%B4%E5%BD%B11.png)加上一些阴影，不过这个阴影还是有问题，等着后面和老师沟通再做修改了

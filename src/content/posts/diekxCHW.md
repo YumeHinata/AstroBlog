@@ -18,7 +18,7 @@ legacyHash: diekxCHW
 
 直入主题我们已经申请好了证书，增加一步节点**部署证书到……**
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-025858.png?sign=q5Yf6wYfbUj2BxtUhJns8Drm-iV2t5UIXi0p4ZC2MpM=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-025858.png)
 
 待部署证书选择刚刚申请的证书
 
@@ -26,7 +26,7 @@ legacyHash: diekxCHW
 
 主机提供商授权选择已有的或者新建
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-030136.png?sign=36Pct800jPZZxMrOO8TMDnSrxOIpvjQfumpeQDHq6jk=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-030136.png)
 
 名称自己选择记得住的
 
@@ -40,7 +40,7 @@ legacyHash: diekxCHW
 
 完成后提交
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-030531.png?sign=zvmcNiJnfeEzK7x1NFKN_X8CHDhLHIWPIckjI9PmBzA=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-030531.png)
 
 **注意：一定要打开回退使用SCP，除非你开启了群晖的SFTP功能**
 
@@ -66,7 +66,7 @@ legacyHash: diekxCHW
 
 成功后我们选择的保存位置会得到以下几个文件
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-031737.png?sign=_HwuMA82VwXkByd5xZF2E6Jl-MDzfOYYEcWgo2Kwwp4=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-031737.png)
 
 注意观察server.pem文件的大小一定不能是0kb
 
@@ -92,17 +92,17 @@ legacyHash: diekxCHW
 
 进入群晖的**控制面板**\-选择**任务计划**
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-033229.png?sign=Ee9vlFu7KHwDEwj8s2M19zTGgN-ma0a4pVbR0MT06z8=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-033229.png)
 
 选择**新增-计划的任务-用户定义的脚步**
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-033415.png?sign=UOXw-vvW3dSQJnXkTVnxtih-6BX1c_Y_PSD_eaBoREw=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-033415.png)
 
 任务名称选择一个自己记得住的英文名
 
 用户账户一定要是root账户，否则无法编辑文件夹里的文件。
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-033552.png?sign=pj2-WXdFISmIfoZyAw6cIfDC-nl6zPcW9qUakk3os_c=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-033552.png)
 
 选择的每月重复日期要和Certimate续签的日期一致
 
@@ -128,7 +128,7 @@ legacyHash: diekxCHW
 
 修改后复制进去
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-034256.png?sign=sz5qaI8lF5aYKU2-wwEhrWhfH3oRP9d8bsXysd4XUrY=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-034256.png)
 
 根据个人需要自行选择是否发送邮件给自己提醒
 
@@ -136,7 +136,7 @@ legacyHash: diekxCHW
 
 完成后**确定**保存
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-034533.png?sign=UzaENE0PoHNiHkI3tnpBCkz3pQzqStkMoTNAH_c4UYQ=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-034533.png)
 
 勾选刚刚保存的任务，点击应用完成计划的启动
 
@@ -151,7 +151,7 @@ legacyHash: diekxCHW
     ls -l
     #输出所有文件的修改日期
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251220-035056.png?sign=BB9aPI7DWGMU-qnzfn480lkluLphnwWbH0UnG_5gto4=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91%E7%BE%A4%E6%99%96%E8%AE%A1%E5%88%92%E4%BB%BB%E5%8A%A1%E8%87%AA%E5%8A%A8%E6%9B%B4%E6%96%B0SSL%E8%AF%81%E4%B9%A6%EF%BC%8C%E5%B7%B2%E9%80%9A%E8%BF%87Certimate%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%B0%86%E8%AF%81%E4%B9%A6%E4%B8%8A%E4%BC%A0%E5%88%B0%E7%BE%A4%E6%99%96%E6%9C%8D%E5%8A%A1%E5%99%A8/QQ20251220-035056.png)
 
 确认文件为近期修改即可
 

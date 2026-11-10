@@ -18,13 +18,13 @@ legacyHash: T0vSHpCO
 
 kook开发者平台内创建一个应用。[https://developer.kookapp.cn/app/index](https://developer.kookapp.cn/app/index)
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251101-235428_1.png?sign=vbjwgJhYPBN4inX4aKbke3bmMgr8Rz_DnACjm9kRR7A=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251101-235428_1.png)
 
 在邀请链接里做如下设置
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251101-235648.png?sign=5O1vmObZreXCFBC0_X3nlx4KWZv2MZgME5T_BLr9etM=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251101-235648.png)
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251101-235721_1.png?sign=oiOeRUtupEAfi3jOSv3Y_htChWGBmmAsxQIT3RdjsT8=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251101-235721_1.png)
 
 通过邀请链接将机器人添加到需要的服务器内
 
@@ -38,11 +38,11 @@ kook开发者平台内创建一个应用。[https://developer.kookapp.cn/app/ind
 
 设计完消息内容后，点击复制代码
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251102-000523.png?sign=5OA-AmF1tawBRUoi-JfYJRIJJgcYy9EvlU1PztUdvkY=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251102-000523.png)
 
 进入模板管理-新建模板-填写内容
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251102-000725_1.png?sign=QrwRxw3oVpjI6KOugVLOsXfY0UTANL4Oi3HOYU5iH-c=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251102-000725_1.png)
 
 模板标题按自己习惯填写不重要
 
@@ -60,7 +60,7 @@ twig语法我们这里不做介绍，可自行点击官方提供的twig文档查
 
 在需要变量的地方填入这个，就像这样
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251102-001335_1.png?sign=BOmqe9S5mg8LPFwPCnwlQd2SKiuHPzsOknVyBzwQZSU=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251102-001335_1.png)
 
 这里的`data.ip` 是要根据之后你webhook请求中的content来决定的，但是`data`这个是全局变量不需要调整的。开发者文档里又没提，还是看生成示例数据得到的。
 
@@ -70,7 +70,7 @@ twig语法我们这里不做介绍，可自行点击官方提供的twig文档查
 
 在正常配置完stun的相关部分后，我们打开webhook开关。
 
-![](https://openlist.yumehinata.com/d///Tianyicloud/blog/QQ20251102-002111.png?sign=uV3FZolx6ixkXAyam5ATig2vUEG7CxBm5P9-gOggtTA=:0)
+![](./images/%E3%80%90%E7%AC%94%E8%AE%B0%E3%80%91CS2%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%88%A9%E7%94%A8stun%E6%88%96ipv6%E5%85%AC%E7%BD%91%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%80%9A%E8%BF%87webhook%E8%AE%A9kook%E6%9C%BA%E5%99%A8%E4%BA%BA%E5%B0%86%E6%94%B9%E5%8F%98%E7%9A%84ip%E4%B8%8E%E7%AB%AF%E5%8F%A3%E5%8F%91%E9%80%81%E8%87%B3%E9%A2%91%E9%81%93/QQ20251102-002111.png)
 
 接口地址是`https://www.kookapp.cn/api/v3/message/create`
 
