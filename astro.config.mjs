@@ -110,6 +110,19 @@ export default defineConfig({
 		}),
 		svelte(),
 		sitemap(),
+		// 吸底音乐播放器（用户自定义）：静态文件在 public/meting/，
+		// 换歌单/主题/开关只改 public/meting/config.js，无需重新 build。
+		{
+			name: "meting-player",
+			hooks: {
+				"astro:config:setup": ({ injectScript }) => {
+					injectScript(
+						"head-inline",
+						`(function(){var s=document.createElement('script');s.src='/meting/standalone.js';document.head.appendChild(s);})();`,
+					);
+				},
+			},
+		},
 	],
 	markdown: {
 		remarkPlugins: [
