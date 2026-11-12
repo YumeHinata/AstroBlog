@@ -13,13 +13,13 @@
   var fixedRoot = null;
   var listenersBound = false;
   var currentOpts = null;
-  var slideCssInjected = false;
 
   // 边缘缩回（仅 fixed + narrow 迷你态）：平时左移留出封面窄条，悬停/聚焦滑出。
   // 只改 left 位移与过渡，不动圆角 / 旋转 / 配色，保持原版外观。
   function injectSlideCss() {
-    if (slideCssInjected || typeof document === 'undefined') return;
-    slideCssInjected = true;
+    if (typeof document === 'undefined') return;
+    // 按 DOM 存在判断：swup HeadPlugin 导航后会移除该样式，需可重复补回。
+    if (document.querySelector('style[data-meting-slideout]')) return;
     var s = document.createElement('style');
     s.setAttribute('data-meting-slideout', '');
     s.textContent =
@@ -78,6 +78,10 @@
 
   function ensureFixedPlayer(opts) {
     if (opts.autoInject === false) return;
+    // 兜底：即使本核心被重新执行，也复用 body 里已持久化的播放器，绝不重复挂载。
+    if (!fixedRoot && typeof document !== 'undefined') {
+      fixedRoot = document.querySelector('meting-js[data-astro-transition-persist="meting-player"]');
+    }
     if (fixedRoot) {
       if (!fixedRoot.isConnected && document.body) document.body.appendChild(fixedRoot);
       return;
@@ -93,6 +97,7 @@
     listenersBound = true;
     function refresh() {
       if (!currentOpts) return;
+      if (currentOpts.slideOut !== false) injectSlideCss();
       upgradePlaceholders(currentOpts);
       ensureFixedPlayer(currentOpts);
     }

@@ -10,9 +10,18 @@
  * APlayer/MetingJS 默认读本目录 vendor/ 下的静态 JS（国内可靠）；在 config 里填
  * aplayerJs / aplayerCss / metingJs 可切换为 CDN（如 jsdelivr）实现零本地文件。
  * 本文件与适配层/核心均为经典脚本，不经过任何打包器，EdgeOne 纯静态部署即可。
+ *
+ * SPA 兼容：window 级单例守卫保证整站只 boot 一次（swup 的 ScriptsPlugin 每次导航
+ * 会重跑 document 内所有脚本，无守卫会重复挂载播放器）；播放器本体挂在 body 上随
+ * swup 持久化，动态注入的 CSS 会在导航后被 HeadPlugin 移除，故在 Astro 生命周期
+ * 事件（@swup/astro 会派发 astro:after-swap / astro:page-load）里补回。
  */
 (function () {
   'use strict';
+
+  // 单例守卫：swup 导航重跑本脚本时直接返回，避免重复加载 / 重复挂载播放器。
+  if (window.__metingPlayerBooted) return;
+  window.__metingPlayerBooted = true;
 
   var current = document.currentScript;
   var base = current && current.src ? current.src.replace(/[^/]*$/, '') : '/meting/';
@@ -21,6 +30,8 @@
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
       s.src = src;
+      // 标记后 swup ScriptsPlugin 不会重跑这些脚本（防止 Meting 重复 define 报错）。
+      s.setAttribute('data-swup-ignore-script', '');
       s.onload = resolve;
       s.onerror = function () { reject(new Error('加载失败: ' + src)); };
       document.head.appendChild(s);
@@ -37,7 +48,14 @@
   function boot() {
     var CFG = window.MetingPlayerConfig || {};
     if (CFG.enabled === false) return;
-    loadCss(CFG.aplayerCss || base + 'vendor/APlayer.min.css');
+    var cssHref = CFG.aplayerCss || base + 'vendor/APlayer.min.css';
+    loadCss(cssHref);
+    // swup HeadPlugin 导航后会移除动态 CSS，这里在页面切换后补回（只补缺失的）。
+    function ensureCss() {
+      if (!document.querySelector('link[data-meting-player]')) loadCss(cssHref);
+    }
+    document.addEventListener('astro:after-swap', ensureCss);
+    document.addEventListener('astro:page-load', ensureCss);
     loadScript(CFG.aplayerJs || base + 'vendor/APlayer.min.js')
       .then(function () { return loadScript(CFG.metingJs || base + 'vendor/Meting.min.js'); })
       .then(function () { return loadScript(base + 'meting-adapter.js'); })
