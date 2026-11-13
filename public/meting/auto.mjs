@@ -6,7 +6,7 @@
  * stock APlayer / MetingJS 以 ?url 资产 + 经典 <script> 加载（与静态 demo 完全
  * 同路径），避免打包器把 UMD 转成 CJS 壳而丢失 window.APlayer / window.MetingJSElement。
  * 适配层 / 核心为纯 IIFE ESM，直接 import；样式经 ?inline 注入单个 <style>。
- * 核心逻辑与静态 demo 共用 core.js，保证两条加载路径行为一致。
+ * 核心逻辑与静态 demo 共用 player-core.js，保证两条加载路径行为一致。
  *
  * 时序：vendor 经典脚本加载完成后才 install() + 创建 <meting-js>，
  *       确保 _parse 补丁先于 connectedCallback 生效（不依赖 SSR 标签）。
@@ -14,7 +14,7 @@
 import aplayerUrl from './vendor/APlayer.min.js?url';
 import metingUrl from './vendor/Meting.min.js?url';
 import './meting-adapter.js';
-import './core.js';
+import './player-core.js';
 import { injectStyles } from './styles.js';
 
 function loadClassic(src) {

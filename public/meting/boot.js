@@ -2,7 +2,7 @@
  * astro-meting-player · 免编译独立加载器（纯 IIFE，无构建依赖）
  * ------------------------------------------------------------------
  * 用法：把整个 client/ 目录拷到博客 public/meting/（或任意静态目录），页面加：
- *   <script src="/meting/standalone.js"></script>
+ *   <script src="/meting/boot.js"></script>
  * 配置放在同目录 config.js（设置 window.MetingPlayerConfig），改 config.js 即可
  * 热更新，无需重新编译 Astro / 重新 build。也可在引入本脚本前 inline 设置全局配置。
  *
@@ -59,7 +59,7 @@
     loadScript(CFG.aplayerJs || base + 'vendor/APlayer.min.js')
       .then(function () { return loadScript(CFG.metingJs || base + 'vendor/Meting.min.js'); })
       .then(function () { return loadScript(base + 'meting-adapter.js'); })
-      .then(function () { return loadScript(base + 'core.js'); })
+      .then(function () { return loadScript(base + 'player-core.js'); })
       .then(function () { window.MetingPlayerCore.setup(CFG); })
       .catch(function (err) { if (window.console) console.error('[meting-player]', err); });
   }

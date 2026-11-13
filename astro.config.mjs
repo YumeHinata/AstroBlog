@@ -118,7 +118,7 @@ export default defineConfig({
 				"astro:config:setup": ({ injectScript }) => {
 					injectScript(
 						"head-inline",
-						`(function(){if(window.__metingPlayerBooted)return;var s=document.createElement('script');s.src='/meting/standalone.js';s.setAttribute('data-swup-ignore-script','');document.head.appendChild(s);})();`,
+						`(function(){if(window.__metingPlayerBooted)return;var s=document.createElement('script');s.src='/meting/boot.js';s.setAttribute('data-swup-ignore-script','');document.head.appendChild(s);})();`,
 					);
 				},
 			},
