@@ -1,8 +1,8 @@
 /**
  * astro-meting-player · 免编译独立加载器（纯 IIFE，无构建依赖）
  * ------------------------------------------------------------------
- * 用法：把整个 client/ 目录拷到博客 public/meting/（或任意静态目录），页面加：
- *   <script src="/meting/boot.js"></script>
+ * 用法：把整个 client/ 目录拷到博客 public/meting@0.1/（或任意静态目录），页面加：
+ *   <script src="/meting@0.1/boot.js"></script>
  * 配置放在同目录 config.js（设置 window.MetingPlayerConfig），改 config.js 即可
  * 热更新，无需重新编译 Astro / 重新 build。也可在引入本脚本前 inline 设置全局配置。
  *
@@ -24,12 +24,9 @@
   window.__metingPlayerBooted = true;
 
   var current = document.currentScript;
-  var base = current && current.src ? current.src.replace(/[^/]*$/, '') : '/meting/';
-
-  // 版本号由注入片段写入 window.__metingVer（集中在 astro.config.mjs 一处维护）。
-  // 给加载链加 ?v= 形成新缓存键，绕过 EdgeOne 边缘缓存，改版后访客立即取新代码。
-  var VER = window.__metingVer || '';
-  var q = VER ? '?v=' + VER : '';
+  // base 从自身 src 推导：文件夹带版本号（如 meting@0.1/）时整条加载链自动跟随该版本路径，
+  // 新路径=新缓存键，天然绕过 EdgeOne 边缘缓存（同 jsdelivr 的 package@version 约定）。
+  var base = current && current.src ? current.src.replace(/[^/]*$/, '') : '/meting@0.1/';
 
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
@@ -65,14 +62,14 @@
     function ensureCss() { loadCss(cssHref); }
     document.addEventListener('astro:after-swap', ensureCss);
     document.addEventListener('astro:page-load', ensureCss);
-    loadScript(CFG.aplayerJs || (base + 'vendor/APlayer.min.js' + q))
-      .then(function () { return loadScript(CFG.metingJs || (base + 'vendor/Meting.min.js' + q)); })
-      .then(function () { return loadScript(base + 'meting-adapter.js' + q); })
-      .then(function () { return loadScript(base + 'player-core.js' + q); })
+    loadScript(CFG.aplayerJs || base + 'vendor/APlayer.min.js')
+      .then(function () { return loadScript(CFG.metingJs || base + 'vendor/Meting.min.js'); })
+      .then(function () { return loadScript(base + 'meting-adapter.js'); })
+      .then(function () { return loadScript(base + 'player-core.js'); })
       .then(function () { window.MetingPlayerCore.setup(CFG); })
       .catch(function (err) { if (window.console) console.error('[meting-player]', err); });
   }
 
   // 同目录 config.js 可选：存在则先加载以注入 window.MetingPlayerConfig
-  loadScript(base + 'config.js' + q).catch(function () { /* 无 config.js，用 inline 全局或默认 */ }).then(boot);
+  loadScript(base + 'config.js').catch(function () { /* 无 config.js，用 inline 全局或默认 */ }).then(boot);
 })();

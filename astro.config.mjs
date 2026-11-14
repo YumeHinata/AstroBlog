@@ -6,6 +6,7 @@ import { pluginCollapsibleSections } from "@expressive-code/plugin-collapsible-s
 import { pluginLineNumbers } from "@expressive-code/plugin-line-numbers";
 import swup from "@swup/astro";
 import { defineConfig } from "astro/config";
+import { METING_BASE } from "./src/constants/meting.mjs";
 import expressiveCode from "astro-expressive-code";
 import icon from "astro-icon";
 import indexnow from "astro-indexnow";
@@ -110,16 +111,16 @@ export default defineConfig({
 		}),
 		svelte(),
 		sitemap(),
-		// 吸底音乐播放器（用户自定义）：静态文件在 public/meting/。
-		// 版本号 v 集中在此一处维护：改版播放器脚本（含 config.js）后递增 v（如日期），
-		// boot.js 运行时读 window.__metingVer 给加载链加 ?v=，绕过 EdgeOne 边缘缓存即时生效。
+		// 吸底音乐播放器（用户自定义）：静态文件在 public/meting@<版本>/。
+		// 版本号集中在 src/constants/meting.mjs 的 METING_VERSION：升级时改文件夹名 + 改该常量即可，
+		// boot.js 从自身 src 推导 base 自动跟随版本路径，新路径=新缓存键绕过 EdgeOne 边缘缓存。
 		{
 			name: "meting-player",
 			hooks: {
 				"astro:config:setup": ({ injectScript }) => {
 					injectScript(
 						"head-inline",
-						`(function(){if(window.__metingPlayerBooted)return;var v='20261114';window.__metingVer=v;var s=document.createElement('script');s.src='/meting/boot.js?v='+v;s.setAttribute('data-swup-ignore-script','');document.head.appendChild(s);})();`,
+						`(function(){if(window.__metingPlayerBooted)return;var s=document.createElement('script');s.src='${METING_BASE}boot.js';s.setAttribute('data-swup-ignore-script','');document.head.appendChild(s);})();`,
 					);
 				},
 			},

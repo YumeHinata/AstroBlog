@@ -18,6 +18,7 @@ import {
 import { defaultFavicons } from "../constants/icon";
 import type { Favicon } from "../types/config";
 import { pathsEqual, url } from "../utils/url-utils";
+import { METING_BASE } from "../constants/meting.mjs";
 import "katex/dist/katex.css";
 import "../styles/custom.css";
 
@@ -145,7 +146,7 @@ const bannerOffset =
 
 
 		<!-- 吸底音乐播放器：静态 head 样式，swup HeadPlugin 不会摘除，消除切页时播放器 UI 闪烁 -->
-		<link rel="stylesheet" href="/meting/vendor/APlayer.min.css" />
+		<link rel="stylesheet" href={`${METING_BASE}vendor/APlayer.min.css`} />
 		<style is:inline data-meting-slideout>.meting-slideout .aplayer.aplayer-fixed.aplayer-narrow .aplayer-body{left:-46px;transition:left .35s cubic-bezier(.4,0,.2,1);}.meting-slideout .aplayer.aplayer-fixed.aplayer-narrow:hover .aplayer-body,.meting-slideout .aplayer.aplayer-fixed.aplayer-narrow:focus-within .aplayer-body{left:0;}</style>
 
 		<slot name="head"></slot>
