@@ -38,6 +38,12 @@
     });
   }
   function loadCss(href) {
+    // 静态 head 已有同 href 样式表（推荐做法）则不重复注入，也不改动它，
+    // 避免被 swup HeadPlugin 当作差异摘除再补回造成播放器 UI 闪烁。
+    var existing = document.querySelectorAll('link[rel="stylesheet"]');
+    for (var i = 0; i < existing.length; i++) {
+      if (existing[i].href === href) return;
+    }
     var l = document.createElement('link');
     l.rel = 'stylesheet';
     l.href = href;
@@ -50,10 +56,8 @@
     if (CFG.enabled === false) return;
     var cssHref = CFG.aplayerCss || base + 'vendor/APlayer.min.css';
     loadCss(cssHref);
-    // swup HeadPlugin 导航后会移除动态 CSS，这里在页面切换后补回（只补缺失的）。
-    function ensureCss() {
-      if (!document.querySelector('link[data-meting-player]')) loadCss(cssHref);
-    }
+    // swup HeadPlugin 导航后会移除动态 CSS；静态 head 已含则 loadCss 按 href 去重直接返回。
+    function ensureCss() { loadCss(cssHref); }
     document.addEventListener('astro:after-swap', ensureCss);
     document.addEventListener('astro:page-load', ensureCss);
     loadScript(CFG.aplayerJs || base + 'vendor/APlayer.min.js')

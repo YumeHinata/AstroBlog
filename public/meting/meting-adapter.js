@@ -143,7 +143,8 @@
       return fetchJSON('url', nativeUrlPath(chunk)).then(function (json) {
         assertCode(json);
         (json.data || []).forEach(function (d) {
-          map[d.id] = d.url ? { url: httpsUpgrade(d.url), br: d.br, expi: d.expi } : null;
+          // 保留 fee/code/payed 用于「登录态缺失」诊断；url 为空表示受限/下架。
+          map[d.id] = { url: d.url ? httpsUpgrade(d.url) : '', br: d.br, expi: d.expi, fee: d.fee, code: d.code, payed: d.payed };
         });
       });
     })).then(function () { return map; });
@@ -191,29 +192,65 @@
     load(player.list.index);
   }
 
+  // ---------- 播放地址保鲜：过期前主动换新 + 出错稳健恢复 ----------
+  // 网易云播放地址带签名有效期（expi，约 20 分钟）。页面挂一整晚后旧地址会 403，
+  // 而 APlayer 自带「出错 2 秒后自动跳下一首」会连锁跳过整张过期歌单并弹报错。
+  // 对策：记录每条地址签发时间，回到前台/聚焦时若过期就静默换新（不自动播放）；
+  // 真出错时先取消 APlayer 的跳歌定时器，再刷新当前曲目并续播。
+  function urlStale(audio) {
+    if (!audio || !audio._urlAt) return false;
+    var ttl = ((audio._expi || 1200) - 120) * 1000; // 提前 2 分钟视为过期
+    return Date.now() >= audio._urlAt + ttl;
+  }
+  function refreshAudio(player, idx, resume) {
+    if (!player || player._adapterDestroyed) return Promise.resolve();
+    var audio = player.list.audios[idx];
+    if (!audio || !audio._id) return Promise.resolve();
+    var now = Date.now();
+    if (audio._refreshing) return audio._refreshing;            // 并发去重
+    if (audio._lastRefresh && now - audio._lastRefresh < 2000) return Promise.resolve(); // 节流，防紧循环
+    audio._lastRefresh = now;
+    audio._refreshing = resolveUrls([audio._id]).then(function (map) {
+      audio._refreshing = null;
+      if (player._adapterDestroyed) return;
+      var fresh = map[audio._id];
+      if (!fresh || !fresh.url) return;
+      audio.url = fresh.url;
+      audio._urlAt = Date.now();
+      audio._expi = fresh.expi || 1200;
+      if (player.list.index !== idx) return;
+      if (resume) {
+        // list.switch 重载 audio.src 并触发 listswitch（顺带清掉 APlayer 跳歌定时器），再续播。
+        player.list.switch(idx);
+        player.play();
+      } else {
+        // 暂停态静默换新：仅当地址真变化时才改 src，避免无谓的 audio 重置 / 歌词闪烁。
+        if (player.audio.src !== fresh.url) { try { player.audio.src = fresh.url; } catch (e) {} }
+      }
+    }).catch(function () { audio._refreshing = null; });
+    return audio._refreshing;
+  }
   function attachUrlRefresh(player) {
     if (!player) return;
     player.on('destroy', function () { player._adapterDestroyed = true; });
     player.on('error', function () {
       if (player._adapterDestroyed) return;
       var idx = player.list.index;
-      var audio = player.list.audios[idx];
-      if (!audio || !audio._id || audio._retried) return;
-      audio._retried = true;
-      resolveUrls([audio._id]).then(function (map) {
-        if (player._adapterDestroyed) return;
-        var fresh = map[audio._id];
-        if (fresh && fresh.url) {
-          audio.url = fresh.url;
-          player.list.switch(idx);
-          player.play();
-        }
-      }).catch(function () {});
+      // 立即取消 APlayer 内置「2 秒后跳歌」，给刷新留时间，避免整晚后连锁跳歌报错。
+      try { player.events.trigger('listswitch', { index: idx }); } catch (e) {}
+      refreshAudio(player, idx, true);
     });
-    player.on('canplay', function () {
-      if (player._adapterDestroyed) return;
-      var a = player.list.audios[player.list.index];
-      if (a) a._retried = false;
+    // 回到前台 / 窗口聚焦：旧地址多半已过期，暂停态下静默换新，用户再点播放即可顺畅播放。
+    function onReturn() {
+      if (player._adapterDestroyed || document.visibilityState === 'hidden') return;
+      var idx = player.list.index;
+      if (player.paused && urlStale(player.list.audios[idx])) refreshAudio(player, idx, false);
+    }
+    document.addEventListener('visibilitychange', onReturn);
+    window.addEventListener('focus', onReturn);
+    player.on('destroy', function () {
+      document.removeEventListener('visibilitychange', onReturn);
+      window.removeEventListener('focus', onReturn);
     });
   }
 
@@ -235,16 +272,22 @@
         if (!tracks.length) { showMessage(element, '歌单为空或上游无数据'); return; }
         return resolveUrls(tracks.map(function (t) { return t.id; })).then(function (urlMap) {
           var audios = [], unavailable = 0;
+          var blocked = { vip: 0, paid: 0, other: 0 };
+          var now = Date.now();
           tracks.forEach(function (t) {
             var u = urlMap[t.id];
             if (!u || !u.url) {
               unavailable++;
+              if (u && u.fee === 1) blocked.vip++;
+              else if (u && u.fee === 4) blocked.paid++;
+              else blocked.other++;
               if (!KEEP_UNAVAILABLE) return;
             }
             audios.push({
               name: t.name, artist: t.artist,
               url: u ? u.url : '', cover: t.cover,
-              lrc: '', _lyricId: t.id, _id: t.id
+              lrc: '', _lyricId: t.id, _id: t.id,
+              _urlAt: now, _expi: (u && u.expi) || 1200
             });
           });
           if (!audios.length) {
@@ -256,7 +299,16 @@
           attachLazyLyrics(element.aplayer);
           attachUrlRefresh(element.aplayer);
           var playableCount = audios.filter(function (a) { return a.url; }).length;
-          report(element, { total: tracks.length, playable: playableCount, unavailable: unavailable });
+          report(element, { total: tracks.length, playable: playableCount, unavailable: unavailable, blocked: blocked });
+          // 登录态诊断（仅提示，不阻断）：proxy 模式下会员/已购歌曲拿到匿名结果，
+          // 多半是 EdgeOne 对 R2 回源未注入登录 Cookie。已购歌曲 payed=0 是最明确的信号。
+          if (MODE === 'proxy' && (blocked.vip || blocked.paid)) {
+            var anonymousPaid = tracks.some(function (t) { var u = urlMap[t.id]; return u && u.fee === 4 && !u.url && u.payed === 0; });
+            if (window.console) console.info('[MetingAdapter] 受限 ' + unavailable + ' 首（会员 ' + blocked.vip + ' / 已购 ' + blocked.paid + ' / 版权下架 ' + blocked.other + '）。' +
+              (anonymousPaid
+                ? '已购歌曲返回 payed=0，说明 R2 回源未携带登录态：请在 EdgeOne 对 /api/song/enhance/player/url 的回源请求头注入有效登录 Cookie（与 R1 一致）。'
+                : '若已开通会员/购买专辑却仍不可播，请检查 EdgeOne R2 回源 Cookie 是否有效。'));
+          }
         });
       });
     }).catch(function (err) {
