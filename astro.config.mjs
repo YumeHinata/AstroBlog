@@ -110,15 +110,16 @@ export default defineConfig({
 		}),
 		svelte(),
 		sitemap(),
-		// 吸底音乐播放器（用户自定义）：静态文件在 public/meting/，
-		// 换歌单/主题/开关只改 public/meting/config.js，无需重新 build。
+		// 吸底音乐播放器（用户自定义）：静态文件在 public/meting/。
+		// 版本号 v 集中在此一处维护：改版播放器脚本（含 config.js）后递增 v（如日期），
+		// boot.js 运行时读 window.__metingVer 给加载链加 ?v=，绕过 EdgeOne 边缘缓存即时生效。
 		{
 			name: "meting-player",
 			hooks: {
 				"astro:config:setup": ({ injectScript }) => {
 					injectScript(
 						"head-inline",
-						`(function(){if(window.__metingPlayerBooted)return;var s=document.createElement('script');s.src='/meting/boot.js';s.setAttribute('data-swup-ignore-script','');document.head.appendChild(s);})();`,
+						`(function(){if(window.__metingPlayerBooted)return;var v='20261114';window.__metingVer=v;var s=document.createElement('script');s.src='/meting/boot.js?v='+v;s.setAttribute('data-swup-ignore-script','');document.head.appendChild(s);})();`,
 					);
 				},
 			},

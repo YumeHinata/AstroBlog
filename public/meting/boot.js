@@ -26,6 +26,11 @@
   var current = document.currentScript;
   var base = current && current.src ? current.src.replace(/[^/]*$/, '') : '/meting/';
 
+  // 版本号由注入片段写入 window.__metingVer（集中在 astro.config.mjs 一处维护）。
+  // 给加载链加 ?v= 形成新缓存键，绕过 EdgeOne 边缘缓存，改版后访客立即取新代码。
+  var VER = window.__metingVer || '';
+  var q = VER ? '?v=' + VER : '';
+
   function loadScript(src) {
     return new Promise(function (resolve, reject) {
       var s = document.createElement('script');
@@ -60,14 +65,14 @@
     function ensureCss() { loadCss(cssHref); }
     document.addEventListener('astro:after-swap', ensureCss);
     document.addEventListener('astro:page-load', ensureCss);
-    loadScript(CFG.aplayerJs || base + 'vendor/APlayer.min.js')
-      .then(function () { return loadScript(CFG.metingJs || base + 'vendor/Meting.min.js'); })
-      .then(function () { return loadScript(base + 'meting-adapter.js'); })
-      .then(function () { return loadScript(base + 'player-core.js'); })
+    loadScript(CFG.aplayerJs || (base + 'vendor/APlayer.min.js' + q))
+      .then(function () { return loadScript(CFG.metingJs || (base + 'vendor/Meting.min.js' + q)); })
+      .then(function () { return loadScript(base + 'meting-adapter.js' + q); })
+      .then(function () { return loadScript(base + 'player-core.js' + q); })
       .then(function () { window.MetingPlayerCore.setup(CFG); })
       .catch(function (err) { if (window.console) console.error('[meting-player]', err); });
   }
 
   // 同目录 config.js 可选：存在则先加载以注入 window.MetingPlayerConfig
-  loadScript(base + 'config.js').catch(function () { /* 无 config.js，用 inline 全局或默认 */ }).then(boot);
+  loadScript(base + 'config.js' + q).catch(function () { /* 无 config.js，用 inline 全局或默认 */ }).then(boot);
 })();
